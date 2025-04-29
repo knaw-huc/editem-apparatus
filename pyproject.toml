@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "editem-apparatus"
+version = "0.1.0"
+description = "Extract structured data from editem apparatus xml"
+authors = ["Bram Buitendijk <bram.buitendijk@di.huc.knaw.nl>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
