@@ -20,10 +20,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: (1/6) Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: (2/6) Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
 
