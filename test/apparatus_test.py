@@ -5,7 +5,7 @@ from editem_apparatus.apparatus_converter import ApparatusConverter
 
 class ApparatusTestCase(unittest.TestCase):
     def test_converter(self):
-        ac = ApparatusConverter("data/israels-apparatus/", "out/israels")
+        ac = ApparatusConverter("data/test-apparatus/", "out/test")
         self.assertIsNotNone(ac)
 
 
