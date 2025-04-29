@@ -231,7 +231,18 @@ files = [
 [package.extras]
 dev = ["black (>=19.3b0)", "pytest (>=4.6.2)"]
 
+[[package]]
+name = "xmltodict"
+version = "0.14.2"
+description = "Makes working with XML feel like you are working with JSON"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "xmltodict-0.14.2-py2.py3-none-any.whl", hash = "sha256:20cc7d723ed729276e808f26fb6b3599f786cbc37e06c65e192ba77c40f20aac"},
+    {file = "xmltodict-0.14.2.tar.gz", hash = "sha256:201e7c28bb210e374999d1dde6382923ab0ed1a8a5faeece48ab525b7810a553"},
+]
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "aa315c560c14412e56d11308cf7ea813bba0e45ee3099709108bd278860329b2"
+content-hash = "057cafed484e9459f3b9c66bc64b70b1382db5acebff0788a63cdbc3cdded05a"
