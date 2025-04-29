@@ -4,11 +4,32 @@ version = "0.1.0"
 description = "Extract structured data from editem apparatus xml"
 authors = ["Bram Buitendijk <bram.buitendijk@di.huc.knaw.nl>"]
 readme = "README.md"
+license = "MIT"
+packages = [{ include = "editem_apparatus" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+dataclasses-json = "^0.6.7"
+icecream = "^2.1.2"
+loguru = "^0.7.0"
 
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+
+[tool.poetry.scripts]
+version = 'poetry_scripts:version'
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    # note the use of single quote below to denote "raw" strings in TOML
+    'ignore:TestResult has no addDuration method',
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/brambg/editem-apparatus/issues"
