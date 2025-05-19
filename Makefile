@@ -6,8 +6,8 @@ SHELL=/bin/bash
 install:
 	poetry lock && poetry install
 
-.PHONY: tests
-tests:
+.PHONY: test
+test:
 	poetry run pytest
 
 .PHONY: version-update-patch
@@ -28,7 +28,7 @@ help:
 	@echo
 	@echo "Please use \`make <target>', where <target> is one of:"
 	@echo "  install  - to install the necessary requirements"
-	@echo "  tests    - to run the unit tests in tests/"
+	@echo "  test     - to run the unit tests in test/"
 	@echo
 	@echo "  version-update-patch  - to update the project version to the next patch version"
 	@echo "  version-update-minor  - to update the project version to the next minor version"
