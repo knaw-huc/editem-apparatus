@@ -9,7 +9,6 @@ class ApparatusTestCase(unittest.TestCase):
         cf = EditemApparatusConfig(
             project_name="test",
             data_path="data/test-apparatus/",
-            static_file_server_base_url="http://localhost:8080",
             export_path="out/test"
         )
         ac = ApparatusConverter(cf)
