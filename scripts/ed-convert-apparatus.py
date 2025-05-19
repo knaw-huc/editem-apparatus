@@ -8,8 +8,7 @@ def main():
         project_name="israels",
         data_path="data/israels-apparatus/",
         export_path="out/israels",
-        static_file_server_base_url="https://data.editem.huygens.nl/israels/apparatus",
-        show_progress=False
+        show_progress=True
     )
     ac = ApparatusConverter(cf)
     ac.convert()
