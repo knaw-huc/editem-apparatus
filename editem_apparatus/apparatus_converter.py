@@ -30,13 +30,13 @@ class ApparatusConverter:
         xml_files = [xml for xml in os.listdir(base_dir) if xml.endswith(".xml")]
         for xml in xml_files:
             base_name = xml.removesuffix(".xml")
-            export_dir = f"{self.output_directory}/{base_name}"
+            export_dir = f"{self.output_directory}"
             os.makedirs(export_dir, exist_ok=True)
             self._process_xml(f"{base_dir}/{xml}", export_dir, base_name)
 
     def _process_xml(self, xml_path: str, output_dir: str, base_name: str):
         logger.info(f"<= {xml_path}")
-        with open(xml_path) as f:
+        with open(xml_path, encoding="utf8") as f:
             xml = f.read()
 
         # export json conversion of complete xml file
@@ -45,7 +45,7 @@ class ApparatusConverter:
         js = json.dumps(element_dict, indent=2, ensure_ascii=False)
         path = f"{output_dir}/{base_name}.json"
         logger.info(f"=> {path}")
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding="utf8") as f:
             f.write(js)
 
         # export all elements with xml:id to json files
@@ -65,9 +65,9 @@ class ApparatusConverter:
                 entity_dict[f"{base_name}/{xml_id}"] = element_dict
 
         normalized_entity_dict = self._normalize_list_values(entity_dict)
-        path = f"{output_dir}/{base_name}-element-dict.json"
+        path = f"{output_dir}/{base_name}-entity-dict.json"
         logger.info(f"=> {path}")
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding="utf8") as f:
             json.dump(normalized_entity_dict, fp=f, indent=2, ensure_ascii=False)
 
     def _simplify_keys(self, kv_dict: dict[str, Any]) -> dict[str, Any]:
