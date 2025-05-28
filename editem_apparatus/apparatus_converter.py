@@ -50,8 +50,10 @@ class ApparatusConverter:
 
         # export all elements with xml:id to json files
         root = ET.fromstring(xml)
-        identified_elements = root.findall(".//*[@xml:id]", namespaces=ns)
-        entity_dict = {}
+        text_node = root.find(".//{http://www.tei-c.org/ns/1.0}text")
+        identified_elements = text_node.findall(".//*[@xml:id]", namespaces=ns)
+        entity_dict: dict[str, Any] = {}
+        entity_id_list: list[str] = []
         for element in identified_elements:
             xml_id = element.attrib.get(f'{{{ns["xml"]}}}id')
             if xml_id is not None:
@@ -63,12 +65,18 @@ class ApparatusConverter:
                 # with open(filepath, 'w') as f:
                 #     json.dump(element_dict, fp=f, indent=2, ensure_ascii=False)
                 entity_dict[f"{base_name}/{xml_id}"] = element_dict
+                entity_id_list.append(xml_id)
 
-        normalized_entity_dict = self._normalize_list_values(entity_dict)
-        path = f"{output_dir}/{base_name}-entity-dict.json"
+        self._export_as_json(self._normalize_list_values(entity_dict), f"{output_dir}/{base_name}-entity-dict.json")
+
+        self._export_as_json([self._normalize_list_values(entity_dict)[f"{base_name}/{k}"] for k in entity_id_list],
+                             f"{output_dir}/{base_name}-entities.json")
+
+    @staticmethod
+    def _export_as_json(data: Any, path: str):
         logger.info(f"=> {path}")
         with open(path, 'w', encoding="utf8") as f:
-            json.dump(normalized_entity_dict, fp=f, indent=2, ensure_ascii=False)
+            json.dump(data, fp=f, indent=2, ensure_ascii=False)
 
     def _simplify_keys(self, kv_dict: dict[str, Any]) -> dict[str, Any]:
         new_dict = {}
