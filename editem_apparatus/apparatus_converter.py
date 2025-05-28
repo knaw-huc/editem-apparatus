@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
 from typing import Any, Dict
 
 import xmltodict
@@ -10,6 +11,14 @@ from loguru import logger
 from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
+
+
+@dataclass
+class NormalizedPersName:
+    forename: str
+    name_link: str
+    surname: str
+    add_name: str
 
 
 class ApparatusConverter:
@@ -67,9 +76,13 @@ class ApparatusConverter:
                 entity_dict[f"{base_name}/{xml_id}"] = element_dict
                 entity_id_list.append(xml_id)
 
-        self._export_as_json(self._normalize_list_values(entity_dict), f"{output_dir}/{base_name}-entity-dict.json")
+        normalized_entity_dict = self._normalize_list_values(entity_dict)
 
-        self._export_as_json([self._normalize_list_values(entity_dict)[f"{base_name}/{k}"] for k in entity_id_list],
+        labelled_entity_dict = self._addLabelsForPersons(normalized_entity_dict)
+
+        self._export_as_json(labelled_entity_dict, f"{output_dir}/{base_name}-entity-dict.json")
+
+        self._export_as_json([labelled_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
                              f"{output_dir}/{base_name}-entities.json")
 
     @staticmethod
@@ -136,3 +149,60 @@ class ApparatusConverter:
         for d in in_dict.values():
             result.update(_recurse(d))
         return result
+
+    def _addLabelsForPersons(self, entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        new_dict = {}
+        for entity_id, entity in entity_dict.items():
+            if "persName" in entity:
+                preferred_pers_name = self._preferred_pers_name(entity["persName"])
+                normalized_pers_name = self._normalized(preferred_pers_name)
+                entity["displayLabel"] = self._display_label(normalized_pers_name)
+                entity["sortLabel"] = self._sort_label(normalized_pers_name)
+            new_dict[f"{entity_id}"] = entity
+        return new_dict
+
+    @staticmethod
+    def _preferred_pers_name(pers_names: list[dict[str, Any]]) -> dict[str, Any]:
+        if len(pers_names) == 1:
+            return pers_names[0]
+        else:
+            return [pn for pn in pers_names if pn["full"] == "abb"][0]
+
+    @staticmethod
+    def _display_label(pers_name: NormalizedPersName) -> str:
+        parts = [pers_name.forename, pers_name.name_link, pers_name.surname, pers_name.add_name]
+        non_empty_parts = [p for p in parts if p]
+        return " ".join(non_empty_parts)
+
+    @staticmethod
+    def _sort_label(pers_name: NormalizedPersName) -> str:
+        parts = [pers_name.name_link.capitalize(), pers_name.surname, pers_name.add_name, pers_name.forename]
+        non_empty_parts = [p for p in parts if p]
+        if len(non_empty_parts) == 1:
+            return non_empty_parts[0]
+        else:
+            return " ".join(non_empty_parts[:-1]) + ", " + non_empty_parts[-1]
+
+    def _normalized(self, pers_name: dict[str, Any]) -> NormalizedPersName:
+        forename = pers_name.get("forename", "")
+        name_link = pers_name.get("nameLink", "")
+        surname = self._normalized_surname(pers_name)
+        add_name = pers_name.get("addName", "")
+        return NormalizedPersName(
+            forename, name_link, surname, add_name
+        )
+
+    @staticmethod
+    def _normalized_surname(pers_name: dict[str, Any]) -> str:
+        surnames: list[str] | str = pers_name.get("surname", [])
+        if isinstance(surnames, str):
+            return surnames
+        elif isinstance(surnames, list):
+            if len(surnames) == 1:
+                return surnames[0]
+            elif len(surnames) == 2:
+                return f"{surnames[0]} ({surnames[1]['text']})"
+            else:
+                return ""
+        else:
+            return ""
