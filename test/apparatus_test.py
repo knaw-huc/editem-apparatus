@@ -1,7 +1,5 @@
 import unittest
 
-from icecream import ic
-
 from editem_apparatus.apparatus_converter import ApparatusConverter
 from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 
@@ -45,8 +43,8 @@ class ApparatusTestCase(unittest.TestCase):
                 "when": "1964"
             }
         }
-        dict = {person["id"]: person}
-        new_dict = ac._addLabelsForPersons(dict)
+        d = {person["id"]: person}
+        new_dict = ac._addLabelsForPersons(d)
         self.assertEqual("Kees Kleykamp", new_dict['pers026']["displayLabel"])
         self.assertEqual("Kleykamp, Kees", new_dict['pers026']["sortLabel"])
 

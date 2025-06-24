@@ -76,7 +76,10 @@ class ApparatusConverter:
                 entity_dict[f"{base_name}/{xml_id}"] = element_dict
                 entity_id_list.append(xml_id)
 
-        normalized_entity_dict = self._normalize_list_values(entity_dict)
+        # TODO: convert lists with objects with "lang"/"type" fields to nested maps (lang, type)
+        converted_entity_dict = self._convert_all_object_lists_with_lang_fields_to_dict(entity_dict)
+
+        normalized_entity_dict = self._normalize_list_values(converted_entity_dict)
 
         labelled_entity_dict = self._addLabelsForPersons(normalized_entity_dict)
 
@@ -84,6 +87,7 @@ class ApparatusConverter:
 
         self._export_as_json([labelled_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
                              f"{output_dir}/{base_name}-entities.json")
+        # TODO: sanity check on uniqueness of facet labels
 
     @staticmethod
     def _export_as_json(data: Any, path: str):
@@ -109,6 +113,58 @@ class ApparatusConverter:
                 else:
                     new_dict[simplified_key] = value
         return new_dict
+
+    def _is_lang_type_object_list(self, value: Any) -> bool:
+        return self._is_lang_object_list(value) and "type" in value[0]
+
+    @staticmethod
+    def _is_lang_object_list(value: Any) -> bool:
+        return isinstance(value, list) and isinstance(value[0], dict) and "lang" in value[0]
+
+    def _convert_object_list_value(
+            self, in_value: Any
+    ) -> Any:
+        if self._is_lang_type_object_list(in_value):
+            out_dict = {}
+            for i in in_value:
+                if "lang" in i:
+                    lang = i["lang"]
+                    out_dict[lang] = {}
+                else:
+                    # TODO: make possible lang values configurable
+                    out_dict["nl"] = {}
+                    out_dict["en"] = {}
+            for i in in_value:
+                if "lang" in i:
+                    lang = i.pop("lang")
+                    o_type = i.pop("type")
+                    other = "".join(i.values())
+                    out_dict[lang][o_type] = other
+                else:
+                    o_type = i.pop("type")
+                    other = "".join(i.values())
+                    out_dict["en"][o_type] = other
+                    out_dict["nl"][o_type] = other
+            return out_dict
+        elif self._is_lang_object_list(in_value):
+            out_dict = {}
+            for i in in_value:
+                lang = i.pop("lang")
+                other = "".join(i.values())
+                out_dict[lang] = other
+            return out_dict
+        else:
+            return in_value
+
+    def _convert_lang_object_list_fields(
+            self, in_dict: dict[str, Any]
+    ) -> dict[str, Any]:
+        return {k: self._convert_object_list_value(v) for (k, v) in in_dict.items()}
+
+    def _convert_all_object_lists_with_lang_fields_to_dict(
+            self, in_dict: dict[str, dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        return {k: self._convert_lang_object_list_fields(v) for (k, v) in in_dict.items()}
 
     def _normalize_list_values(self, in_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
         def _set_value_as_list(d, path):

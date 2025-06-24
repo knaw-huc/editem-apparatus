@@ -10,6 +10,10 @@ install:
 test:
 	poetry run pytest
 
+.PHONY: convert-apparatus-israels
+convert-apparatus-israels:
+	poetry run ./scripts/ed-convert-apparatus.py
+
 .PHONY: version-update-patch
 version-update-patch:
 	poetry run version patch
@@ -24,11 +28,13 @@ version-update-major:
 
 .PHONY: help
 help:
-	@echo "make-tools for untanngle"
+	@echo "make-tools for editem-apparatus"
 	@echo
 	@echo "Please use \`make <target>', where <target> is one of:"
 	@echo "  install  - to install the necessary requirements"
 	@echo "  test     - to run the unit tests in test/"
+	@echo
+	@echo "  convert-apparatus-israels - convert the israels apparatus files"
 	@echo
 	@echo "  version-update-patch  - to update the project version to the next patch version"
 	@echo "  version-update-minor  - to update the project version to the next minor version"
