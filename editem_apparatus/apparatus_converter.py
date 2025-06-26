@@ -76,7 +76,6 @@ class ApparatusConverter:
                 entity_dict[f"{base_name}/{xml_id}"] = element_dict
                 entity_id_list.append(xml_id)
 
-        # TODO: convert lists with objects with "lang"/"type" fields to nested maps (lang, type)
         converted_entity_dict = self._convert_all_object_lists_with_lang_fields_to_dict(entity_dict)
 
         normalized_entity_dict = self._normalize_list_values(converted_entity_dict)
