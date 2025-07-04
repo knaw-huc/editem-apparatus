@@ -10,9 +10,11 @@ def main():
         export_path="out/israels",
         show_progress=True
     )
-    ac = ApparatusConverter(cf)
-    ac.convert()
-
+    errors = ApparatusConverter(cf).convert()
+    if errors:
+        print("Errors:")
+        for error in errors:
+            print(f"- {error}")
 
 if __name__ == '__main__':
     main()

@@ -25,6 +25,7 @@ class ApparatusConverter:
     def __init__(self, config: EditemApparatusConfig):
         self.apparatus_directory = config.data_path.removesuffix("/")
         self.output_directory = config.export_path.removesuffix("/")
+        self.errors = []
         if not config.show_progress:
             logger.remove()
             logger.add(sys.stdout, level="WARNING")
@@ -34,7 +35,7 @@ class ApparatusConverter:
                 os.remove(config.log_file_path)
             logger.add(config.log_file_path)
 
-    def convert(self):
+    def convert(self) -> list[str]:
         base_dir = self.apparatus_directory
         xml_files = [xml for xml in os.listdir(base_dir) if xml.endswith(".xml")]
         for xml in xml_files:
@@ -42,6 +43,8 @@ class ApparatusConverter:
             export_dir = f"{self.output_directory}"
             os.makedirs(export_dir, exist_ok=True)
             self._process_xml(f"{base_dir}/{xml}", export_dir, base_name)
+        self._add_labels_to_refs()
+        return self.errors
 
     def _process_xml(self, xml_path: str, output_dir: str, base_name: str):
         logger.info(f"<= {xml_path}")
@@ -120,9 +123,7 @@ class ApparatusConverter:
     def _is_lang_object_list(value: Any) -> bool:
         return isinstance(value, list) and isinstance(value[0], dict) and "lang" in value[0]
 
-    def _convert_object_list_value(
-            self, in_value: Any
-    ) -> Any:
+    def _convert_object_list_value(self, in_value: Any) -> Any:
         if self._is_lang_type_object_list(in_value):
             out_dict = {}
             for i in in_value:
@@ -261,3 +262,28 @@ class ApparatusConverter:
                 return ""
         else:
             return ""
+
+    def _add_label_to_ref(self, entity: dict[str, Any], label4ref: dict[str, str]) -> dict[str, Any]:
+        if "relation" in entity and "ref" in entity["relation"]:
+            ref = entity["relation"]["ref"]
+            if ref in label4ref:
+                entity["relation"]["label"] = label4ref[ref]
+            else:
+                error = f"invalid ref: {ref} for artwork.xml#{entity['id']}"
+                logger.error(error)
+                self.errors.append(error)
+                entity["relation"]["label"] = f"!no label found for ref {ref}"
+        return entity
+
+    def _add_labels_to_refs(self):
+        bio_path = f"{self.output_directory}/bio-entities.json"
+        with open(bio_path) as f:
+            bio_entities = json.load(f)
+        label_for_ref = {f"bio.xml#{b['id']}": b["displayLabel"] for b in bio_entities}
+        artwork_path = f"{self.output_directory}/artwork-entities.json"
+        with open(artwork_path) as f:
+            artwork_entities = json.load(f)
+        new_artwork_entities = [self._add_label_to_ref(a, label_for_ref) for a in
+                                artwork_entities]
+        with open(artwork_path, "w", encoding="utf8") as f:
+            json.dump(new_artwork_entities, f, indent=4, ensure_ascii=False)
