@@ -44,7 +44,7 @@ class ApparatusTestCase(unittest.TestCase):
             }
         }
         d = {person["id"]: person}
-        new_dict = ac._addLabelsForPersons(d)
+        new_dict = ac._add_labels_for_persons(d)
         self.assertEqual("Kees Kleykamp", new_dict['pers026']["displayLabel"])
         self.assertEqual("Kleykamp, Kees", new_dict['pers026']["sortLabel"])
 

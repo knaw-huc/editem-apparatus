@@ -25,6 +25,7 @@ class ApparatusConverter:
     def __init__(self, config: EditemApparatusConfig):
         self.apparatus_directory = config.data_path.removesuffix("/")
         self.output_directory = config.export_path.removesuffix("/")
+        self.graphic_url_mapper = config.graphic_url_mapper
         self.errors = []
         if not config.show_progress:
             logger.remove()
@@ -83,11 +84,13 @@ class ApparatusConverter:
 
         normalized_entity_dict = self._normalize_list_values(converted_entity_dict)
 
-        labelled_entity_dict = self._addLabelsForPersons(normalized_entity_dict)
+        labelled_entity_dict = self._add_labels_for_persons(normalized_entity_dict)
 
-        self._export_as_json(labelled_entity_dict, f"{output_dir}/{base_name}-entity-dict.json")
+        extended_graph_url_entity_dict = self._extend_graphic_url(labelled_entity_dict)
 
-        self._export_as_json([labelled_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
+        self._export_as_json(extended_graph_url_entity_dict, f"{output_dir}/{base_name}-entity-dict.json")
+
+        self._export_as_json([extended_graph_url_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
                              f"{output_dir}/{base_name}-entities.json")
         # TODO: sanity check on uniqueness of facet labels
 
@@ -206,7 +209,7 @@ class ApparatusConverter:
             result.update(_recurse(d))
         return result
 
-    def _addLabelsForPersons(self, entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    def _add_labels_for_persons(self, entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
         new_dict = {}
         for entity_id, entity in entity_dict.items():
             if "persName" in entity:
@@ -216,6 +219,21 @@ class ApparatusConverter:
                 entity["sortLabel"] = self._sort_label(normalized_pers_name)
             new_dict[f"{entity_id}"] = entity
         return new_dict
+
+    def _extend_graphic_url(
+            self,
+            entity_dict: dict[str, dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        if self.graphic_url_mapper:
+            new_dict = {}
+            for entity_id, entity in entity_dict.items():
+                if "graphic" in entity and ("url" in entity["graphic"]):
+                    graphic_url = entity["graphic"]["url"]
+                    entity["graphic"]["url"] = self.graphic_url_mapper(graphic_url)
+                new_dict[f"{entity_id}"] = entity
+            return new_dict
+        else:
+            return entity_dict
 
     @staticmethod
     def _preferred_pers_name(pers_names: list[dict[str, Any]]) -> dict[str, Any]:
