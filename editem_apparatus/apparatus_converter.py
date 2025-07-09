@@ -92,7 +92,8 @@ class ApparatusConverter:
             self._convert_all_object_lists_with_lang_fields_to_dict,
             self._normalize_list_values,
             self._add_labels_for_persons,
-            self._extend_graphic_url
+            self._extend_graphic_url,
+            self._convert_source_to_list
         )
 
         self._export_as_json(converted_entity_dict, f"{output_dir}/{base_name}-entity-dict.json")
@@ -224,23 +225,29 @@ class ApparatusConverter:
                 normalized_pers_name = self._normalized(preferred_pers_name)
                 entity["displayLabel"] = self._display_label(normalized_pers_name)
                 entity["sortLabel"] = self._sort_label(normalized_pers_name)
-            new_dict[f"{entity_id}"] = entity
+            new_dict[entity_id] = entity
         return new_dict
 
-    def _extend_graphic_url(
-            self,
-            entity_dict: dict[str, dict[str, Any]]
-    ) -> dict[str, dict[str, Any]]:
+    def _extend_graphic_url(self, entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
         if self.graphic_url_mapper:
             new_dict = {}
             for entity_id, entity in entity_dict.items():
                 if "graphic" in entity and ("url" in entity["graphic"]):
                     graphic_url = entity["graphic"]["url"]
                     entity["graphic"]["url"] = self.graphic_url_mapper(graphic_url)
-                new_dict[f"{entity_id}"] = entity
+                new_dict[entity_id] = entity
             return new_dict
         else:
             return entity_dict
+
+    @staticmethod
+    def _convert_source_to_list(entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        new_dict = {}
+        for entity_id, entity in entity_dict.items():
+            if "source" in entity:
+                entity["source"] = entity["source"].split(" ")
+            new_dict[entity_id] = entity
+        return new_dict
 
     @staticmethod
     def _preferred_pers_name(pers_names: list[dict[str, Any]]) -> dict[str, Any]:
