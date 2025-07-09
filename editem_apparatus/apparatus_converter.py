@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import traceback
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Any, Dict
@@ -40,10 +41,15 @@ class ApparatusConverter:
         base_dir = self.apparatus_directory
         xml_files = [xml for xml in os.listdir(base_dir) if xml.endswith(".xml")]
         for xml in xml_files:
-            base_name = xml.removesuffix(".xml")
-            export_dir = f"{self.output_directory}"
-            os.makedirs(export_dir, exist_ok=True)
-            self._process_xml(f"{base_dir}/{xml}", export_dir, base_name)
+            try:
+                base_name = xml.removesuffix(".xml")
+                export_dir = f"{self.output_directory}"
+                os.makedirs(export_dir, exist_ok=True)
+                self._process_xml(f"{base_dir}/{xml}", export_dir, base_name)
+            except Exception as e:
+                message = f"there was an error converting {xml}: {e}"
+                self.errors.append(message)
+                print(traceback.format_exc(), file=sys.stderr)
         self._add_labels_to_refs()
         return self.errors
 
