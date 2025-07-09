@@ -8,6 +8,7 @@ from typing import Any, Dict
 
 import xmltodict
 from loguru import logger
+from toolz import pipe
 
 from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 
@@ -86,17 +87,17 @@ class ApparatusConverter:
                 entity_dict[f"{base_name}/{xml_id}"] = element_dict
                 entity_id_list.append(xml_id)
 
-        converted_entity_dict = self._convert_all_object_lists_with_lang_fields_to_dict(entity_dict)
+        converted_entity_dict = pipe(
+            entity_dict,
+            self._convert_all_object_lists_with_lang_fields_to_dict,
+            self._normalize_list_values,
+            self._add_labels_for_persons,
+            self._extend_graphic_url
+        )
 
-        normalized_entity_dict = self._normalize_list_values(converted_entity_dict)
+        self._export_as_json(converted_entity_dict, f"{output_dir}/{base_name}-entity-dict.json")
 
-        labelled_entity_dict = self._add_labels_for_persons(normalized_entity_dict)
-
-        extended_graph_url_entity_dict = self._extend_graphic_url(labelled_entity_dict)
-
-        self._export_as_json(extended_graph_url_entity_dict, f"{output_dir}/{base_name}-entity-dict.json")
-
-        self._export_as_json([extended_graph_url_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
+        self._export_as_json([converted_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
                              f"{output_dir}/{base_name}-entities.json")
         # TODO: sanity check on uniqueness of facet labels
 
