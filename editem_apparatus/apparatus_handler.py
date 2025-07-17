@@ -100,17 +100,19 @@ class ApparatusHandler(ContentHandler):
     def processingInstruction(self, target, data):
         pass
 
-# Match URLs starting with http(s) or www, avoid trailing punctuation
+
+# Match URLs starting with http(s) or www.
 url_pattern = re.compile(
-    r'(?P<url>(https?://|www\.)[^\s<>"\'()]+?)(?=[.,!?;:]?(?:\s|$))',
+    r'(?P<url>(https?://|www\.)[^\s<>"\'()]+[^\s<>"\'(),.!?;:\]])?',
     re.IGNORECASE
 )
 
 
 def linkify_urls(text: str) -> str:
-    # Replacement function to wrap the URL in an anchor tag
     def replace_with_link(match):
         url = match.group('url')
+        if not url:
+            return match.group(0)
         href = url if url.startswith('http') else f'https://{url}'
         return f'<a href="{href}" target="_blank">{url}</a>'
 
