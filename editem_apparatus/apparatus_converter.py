@@ -3,6 +3,7 @@ import os
 import sys
 import traceback
 import xml.etree.ElementTree as ET
+import xml.sax
 from dataclasses import dataclass
 from typing import Any, Dict
 
@@ -10,6 +11,7 @@ import xmltodict
 from loguru import logger
 from toolz import pipe
 
+from editem_apparatus.apparatus_handler import ApparatusHandler
 from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
@@ -59,6 +61,10 @@ class ApparatusConverter:
         with open(xml_path, encoding="utf8") as f:
             xml = f.read()
 
+        self._convert_to_json(xml, output_dir, base_name)
+        self._convert_to_html(xml, output_dir, base_name)
+
+    def _convert_to_json(self, xml: str, output_dir: str, base_name: str):
         # export json conversion of complete xml file
         xpars = xmltodict.parse(xml)
         element_dict = self._simplify_keys(list(xpars.values())[0])
@@ -68,9 +74,10 @@ class ApparatusConverter:
         with open(path, 'w', encoding="utf8") as f:
             f.write(js)
 
-        # export all elements with xml:id to json files
         root = ET.fromstring(xml)
         text_node = root.find(".//{http://www.tei-c.org/ns/1.0}text")
+
+        # export all elements with xml:id to json files
         identified_elements = text_node.findall(".//*[@xml:id]", namespaces=ns)
         entity_dict: dict[str, Any] = {}
         entity_id_list: list[str] = []
@@ -95,9 +102,7 @@ class ApparatusConverter:
             self._extend_graphic_url,
             self._convert_source_to_list
         )
-
         self._export_as_json(converted_entity_dict, f"{output_dir}/{base_name}-entity-dict.json")
-
         self._export_as_json([converted_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
                              f"{output_dir}/{base_name}-entities.json")
         # TODO: sanity check on uniqueness of facet labels
@@ -323,3 +328,12 @@ class ApparatusConverter:
                                 artwork_entities]
         with open(artwork_path, "w", encoding="utf8") as f:
             json.dump(new_artwork_entities, f, indent=4, ensure_ascii=False)
+
+    @staticmethod
+    def _convert_to_html(xml_string: str, output_dir: str, base_name: str):
+        handler = ApparatusHandler()
+        xml.sax.parseString(xml_string, handler)
+        path = f"{output_dir}/{base_name}.html"
+        logger.info(f"=> {path}")
+        with open(path, 'w', encoding="utf8") as f:
+            f.write(handler.html)
