@@ -100,10 +100,9 @@ class ApparatusHandler(ContentHandler):
     def processingInstruction(self, target, data):
         pass
 
-
-# Regex pattern to match URLs (http, https, or www)
+# Match URLs starting with http(s) or www, avoid trailing punctuation
 url_pattern = re.compile(
-    r'(?P<url>(https?://|www\.)[^\s<>"\'()]+)',
+    r'(?P<url>(https?://|www\.)[^\s<>"\'()]+?)(?=[.,!?;:]?(?:\s|$))',
     re.IGNORECASE
 )
 
@@ -115,5 +114,4 @@ def linkify_urls(text: str) -> str:
         href = url if url.startswith('http') else f'https://{url}'
         return f'<a href="{href}" target="_blank">{url}</a>'
 
-    # Substitute all URLs with HTML links
     return url_pattern.sub(replace_with_link, text)
