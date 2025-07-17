@@ -1,3 +1,4 @@
+import re
 from collections import deque
 from xml.sax import ContentHandler
 
@@ -94,7 +95,25 @@ class ApparatusHandler(ContentHandler):
 
     def characters(self, content):
         if self.capture:
-            self.html += content
+            self.html += linkify_urls(content)
 
     def processingInstruction(self, target, data):
         pass
+
+
+# Regex pattern to match URLs (http, https, or www)
+url_pattern = re.compile(
+    r'(?P<url>(https?://|www\.)[^\s<>"\'()]+)',
+    re.IGNORECASE
+)
+
+
+def linkify_urls(text: str) -> str:
+    # Replacement function to wrap the URL in an anchor tag
+    def replace_with_link(match):
+        url = match.group('url')
+        href = url if url.startswith('http') else f'https://{url}'
+        return f'<a href="{href}" target="_blank">{url}</a>'
+
+    # Substitute all URLs with HTML links
+    return url_pattern.sub(replace_with_link, text)
