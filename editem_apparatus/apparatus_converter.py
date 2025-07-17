@@ -30,7 +30,9 @@ class ApparatusConverter:
         self.apparatus_directory = config.data_path.removesuffix("/")
         self.output_directory = config.export_path.removesuffix("/")
         self.graphic_url_mapper = config.graphic_url_mapper
+        self.file_url_prefix = config.file_url_prefix
         self.errors = []
+        self.generated_file_urls = []
         if not config.show_progress:
             logger.remove()
             logger.add(sys.stdout, level="WARNING")
@@ -43,17 +45,21 @@ class ApparatusConverter:
     def convert(self) -> list[str]:
         base_dir = self.apparatus_directory
         xml_files = [xml for xml in os.listdir(base_dir) if xml.endswith(".xml")]
-        for xml in xml_files:
+        for xml_file in xml_files:
             try:
-                base_name = xml.removesuffix(".xml")
+                base_name = xml_file.removesuffix(".xml")
                 export_dir = f"{self.output_directory}"
                 os.makedirs(export_dir, exist_ok=True)
-                self._process_xml(f"{base_dir}/{xml}", export_dir, base_name)
+                self._process_xml(f"{base_dir}/{xml_file}", export_dir, base_name)
             except Exception as e:
-                message = f"there was an error converting {xml}: {e}"
+                message = f"there was an error converting {xml_file}: {e}"
                 self.errors.append(message)
                 print(traceback.format_exc(), file=sys.stderr)
         self._add_labels_to_refs()
+        print("generated files:")
+        for f in sorted(self.generated_file_urls):
+            url = f.replace(self.output_directory, "")
+            print(f"- {url}")
         return self.errors
 
     def _process_xml(self, xml_path: str, output_dir: str, base_name: str):
@@ -73,6 +79,7 @@ class ApparatusConverter:
         logger.info(f"=> {path}")
         with open(path, 'w', encoding="utf8") as f:
             f.write(js)
+        self._add_generated_file(path)
 
         root = ET.fromstring(xml)
         text_node = root.find(".//{http://www.tei-c.org/ns/1.0}text")
@@ -107,11 +114,11 @@ class ApparatusConverter:
                              f"{output_dir}/{base_name}-entities.json")
         # TODO: sanity check on uniqueness of facet labels
 
-    @staticmethod
-    def _export_as_json(data: Any, path: str):
+    def _export_as_json(self, data: Any, path: str):
         logger.info(f"=> {path}")
         with open(path, 'w', encoding="utf8") as f:
             json.dump(data, fp=f, indent=2, ensure_ascii=False)
+        self._add_generated_file(path)
 
     def _simplify_keys(self, kv_dict: dict[str, Any]) -> dict[str, Any]:
         new_dict = {}
@@ -329,11 +336,14 @@ class ApparatusConverter:
         with open(artwork_path, "w", encoding="utf8") as f:
             json.dump(new_artwork_entities, f, indent=4, ensure_ascii=False)
 
-    @staticmethod
-    def _convert_to_html(xml_string: str, output_dir: str, base_name: str):
+    def _convert_to_html(self, xml_string: str, output_dir: str, base_name: str):
         handler = ApparatusHandler()
         xml.sax.parseString(xml_string, handler)
         path = f"{output_dir}/{base_name}.html"
         logger.info(f"=> {path}")
         with open(path, 'w', encoding="utf8") as f:
             f.write(handler.html)
+        self._add_generated_file(path)
+
+    def _add_generated_file(self, path: str):
+        self.generated_file_urls.append(f"{self.file_url_prefix}{path}")
