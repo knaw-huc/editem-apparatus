@@ -7,7 +7,7 @@ class ApparatusHandler(ContentHandler):
     def __init__(self):
         self.html = ""
         self.capture = False
-        self.stack = deque()
+        self.parent_tag_stack = deque()
         self.close_tags = {}
         self.unhandled_tags = set()
 
@@ -20,8 +20,7 @@ class ApparatusHandler(ContentHandler):
             self.html += f"<!-- unhandled tags:\n{unhandled_tags_list} -->"
 
     def startElement(self, tag, attributes):
-        self.stack.append(tag)
-        if tag == "body":
+        if tag == "titleStmt" or tag == "body":
             self.capture = True
 
         elif self.capture and tag == "bibl":
@@ -68,21 +67,27 @@ class ApparatusHandler(ContentHandler):
             self.close_tags[tag] = "</p>"
 
         elif self.capture and tag == "title":
-            if 'level' in attributes:
-                clazz = f'title_{attributes["level"]}'
+            if 'titleStmt' == self.parent_tag_stack[-1]:
+                self.html += f"<h2>"
+                self.close_tags[tag] = "</h2>"
             else:
-                clazz = 'title'
-            self.html += f"<span class='{clazz}'>"
-            self.close_tags[tag] = "</span>"
+                if 'level' in attributes:
+                    clazz = f'title_{attributes["level"]}'
+                else:
+                    clazz = 'title'
+                self.html += f"<span class='{clazz}'>"
+                self.close_tags[tag] = "</span>"
 
         else:
             if self.capture:
                 self.unhandled_tags.add(tag)
                 self.html += f"<!-- open  {tag} {attributes.keys()} -->"
+        self.parent_tag_stack.append(tag)
 
     def endElement(self, tag):
-        self.stack.pop()
-        if tag == "body":
+        self.parent_tag_stack.pop()
+
+        if tag == "body" or tag == "titleStmt":
             self.capture = False
         else:
             if self.capture:
