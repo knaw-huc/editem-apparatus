@@ -12,10 +12,9 @@ class ApparatusHandler(ContentHandler):
         self.unhandled_tags = set()
 
     def startDocument(self):
-        self.html += "<div>\n"
+        pass
 
     def endDocument(self):
-        self.html += "</div>\n"
         if self.unhandled_tags:
             unhandled_tags_list = '\n'.join(sorted(self.unhandled_tags))
             self.html += f"<!-- unhandled tags:\n{unhandled_tags_list} -->"
