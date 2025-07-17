@@ -25,11 +25,12 @@ class ApparatusHandler(ContentHandler):
 
         elif self.capture and tag == "bibl":
             if 'xml:id' in attributes:
-                self.html += f"<div class='bibl' id='{attributes['xml:id']}'>"
+                xml_id = attributes["xml:id"]
+                self.html += f'<div class="bibl" id="{xml_id}">'
                 self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "label":
-            self.html += "<div class='label'>"
+            self.html += '<div class="label">'
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "head":
@@ -38,11 +39,11 @@ class ApparatusHandler(ContentHandler):
 
         elif self.capture and tag == "hi":
             rend = attributes["rend"]
-            self.html += f"<span class='rend_{rend}'>"
+            self.html += f'<span class="rend_{rend}">'
             self.close_tags[tag] = "</span>"
 
         elif self.capture and tag == "item":
-            self.html += "<div class='item'>"
+            self.html += '<div class="item">'
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "list":
@@ -50,17 +51,17 @@ class ApparatusHandler(ContentHandler):
                 clazz = f'list_{attributes["type"]}'
             else:
                 clazz = 'list'
-            self.html += f"<div class='{clazz}'>"
+            self.html += f'<div class="{clazz}">'
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "listBibl":
-            self.html += "<div class='listBibl'>"
+            self.html += '<div class="listBibl">'
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "p":
             if "rend" in attributes:
                 rend = attributes["rend"]
-                self.html += f"<p class='rend_{rend}'>"
+                self.html += f'<p class="rend_{rend}">'
             else:
                 self.html += "<p>"
 
@@ -75,7 +76,7 @@ class ApparatusHandler(ContentHandler):
                     clazz = f'title_{attributes["level"]}'
                 else:
                     clazz = 'title'
-                self.html += f"<span class='{clazz}'>"
+                self.html += f'<span class="{clazz}">'
                 self.close_tags[tag] = "</span>"
 
         else:
