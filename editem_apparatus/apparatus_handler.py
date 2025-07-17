@@ -8,7 +8,7 @@ class ApparatusHandler(ContentHandler):
         self.html = ""
         self.capture = False
         self.parent_tag_stack = deque()
-        self.close_tags = {}
+        self.close_tags = {}  # won't handle self-nested elements!
         self.unhandled_tags = set()
 
     def startDocument(self):
@@ -27,11 +27,15 @@ class ApparatusHandler(ContentHandler):
             if 'xml:id' in attributes:
                 xml_id = attributes["xml:id"]
                 self.html += f'<div class="bibl" id="{xml_id}">'
-                self.close_tags[tag] = "</div>"
+                self.close_tags[tag] = "</dd></div>"
 
         elif self.capture and tag == "label":
-            self.html += '<div class="label">'
-            self.close_tags[tag] = "</div>"
+            if self.parent_tag_stack[-1] == "bibl":
+                self.html += '<dt class="label">'
+                self.close_tags[tag] = "</dt><dd>"
+            else:
+                self.html += '<dt class="label">'
+                self.close_tags[tag] = "</dt>"
 
         elif self.capture and tag == "head":
             self.html += "<h3>"
@@ -43,20 +47,20 @@ class ApparatusHandler(ContentHandler):
             self.close_tags[tag] = "</span>"
 
         elif self.capture and tag == "item":
-            self.html += '<div class="item">'
-            self.close_tags[tag] = "</div>"
+            self.html += '<dd class="item">'
+            self.close_tags[tag] = "</dd>"
 
         elif self.capture and tag == "list":
             if "type" in attributes:
                 clazz = f'list_{attributes["type"]}'
             else:
                 clazz = 'list'
-            self.html += f'<div class="{clazz}">'
-            self.close_tags[tag] = "</div>"
+            self.html += f'<dl class="{clazz}">'
+            self.close_tags[tag] = "</dl>"
 
         elif self.capture and tag == "listBibl":
-            self.html += '<div class="listBibl">'
-            self.close_tags[tag] = "</div>"
+            self.html += '<dl class="listBibl">'
+            self.close_tags[tag] = "</dl>"
 
         elif self.capture and tag == "p":
             if "rend" in attributes:
