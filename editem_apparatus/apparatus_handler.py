@@ -99,7 +99,7 @@ class ApparatusHandler(ContentHandler):
 
     def characters(self, content):
         if self.capture:
-            self.html += linkify_urls(content)
+            self.html += linkify_urls(content.lstrip())
 
     def processingInstruction(self, target, data):
         pass
