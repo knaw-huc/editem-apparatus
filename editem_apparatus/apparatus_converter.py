@@ -362,7 +362,8 @@ class ApparatusConverter:
     @staticmethod
     def _load_illustration_dimensions(illustration_sizes_file: str) -> dict[str, Dimensions]:
         illustration_dimensions: dict[str, Dimensions] = {}
-        with open(illustration_sizes_file, encoding='utf8') as f:
-            for record in csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE):
-                illustration_dimensions[record["file"]] = Dimensions(int(record["width"]), int(record["height"]))
+        if illustration_sizes_file is not None:
+            with open(illustration_sizes_file, encoding='utf8') as f:
+                for record in csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE):
+                    illustration_dimensions[record["file"]] = Dimensions(int(record["width"]), int(record["height"]))
         return illustration_dimensions
