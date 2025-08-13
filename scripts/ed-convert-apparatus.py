@@ -15,6 +15,7 @@ def main():
         graphic_url_mapper=graphic_url_mapper,
         show_progress=True,
         file_url_prefix="http://localhost:8040/files/israels/apparatus",
+        illustration_sizes_file="/Users/bram/workspaces/editem/editem/data/project/israels/scans/sizes_illustrations.tsv"
     )
     errors = ApparatusConverter(cf).convert()
     if errors:

@@ -1,3 +1,4 @@
+import csv
 import json
 import os
 import sys
@@ -25,6 +26,12 @@ class NormalizedPersName:
     add_name: str
 
 
+@dataclass
+class Dimensions:
+    width: int
+    height: int
+
+
 class ApparatusConverter:
     def __init__(self, config: EditemApparatusConfig):
         self.apparatus_directory = config.data_path.removesuffix("/")
@@ -33,6 +40,7 @@ class ApparatusConverter:
         self.file_url_prefix = config.file_url_prefix
         self.errors = []
         self.generated_file_urls = []
+        self.illustration_dimensions = self._load_illustration_dimensions(config.illustration_sizes_file)
         if not config.show_progress:
             logger.remove()
             logger.add(sys.stdout, level="WARNING")
@@ -65,10 +73,10 @@ class ApparatusConverter:
     def _process_xml(self, xml_path: str, output_dir: str, base_name: str):
         logger.info(f"<= {xml_path}")
         with open(xml_path, encoding="utf8") as f:
-            xml = f.read()
+            xml_source = f.read()
 
-        self._convert_to_json(xml, output_dir, base_name)
-        self._convert_to_html(xml, output_dir, base_name)
+        self._convert_to_json(xml_source, output_dir, base_name)
+        self._convert_to_html(xml_source, output_dir, base_name)
 
     def _convert_to_json(self, xml: str, output_dir: str, base_name: str):
         # export json conversion of complete xml file
@@ -106,7 +114,7 @@ class ApparatusConverter:
             self._convert_all_object_lists_with_lang_fields_to_dict,
             self._normalize_list_values,
             self._add_labels_for_persons,
-            self._extend_graphic_url,
+            self._extend_graphic_annotation,
             self._convert_source_to_list
         )
         self._export_as_json(converted_entity_dict, f"{output_dir}/{base_name}-entity-dict.json")
@@ -240,13 +248,16 @@ class ApparatusConverter:
             new_dict[entity_id] = entity
         return new_dict
 
-    def _extend_graphic_url(self, entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    def _extend_graphic_annotation(self, entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
         if self.graphic_url_mapper:
             new_dict = {}
             for entity_id, entity in entity_dict.items():
                 if "graphic" in entity and ("url" in entity["graphic"]):
                     graphic_url = entity["graphic"]["url"]
                     entity["graphic"]["url"] = self.graphic_url_mapper(graphic_url)
+                    dimensions = self.illustration_dimensions[graphic_url]
+                    entity["graphic"]["width"] = dimensions.width
+                    entity["graphic"]["height"] = dimensions.height
                 new_dict[entity_id] = entity
             return new_dict
         else:
@@ -347,3 +358,11 @@ class ApparatusConverter:
 
     def _add_generated_file(self, path: str):
         self.generated_file_urls.append(f"{self.file_url_prefix}{path}")
+
+    @staticmethod
+    def _load_illustration_dimensions(illustration_sizes_file: str) -> dict[str, Dimensions]:
+        illustration_dimensions: dict[str, Dimensions] = {}
+        with open(illustration_sizes_file, encoding='utf8') as f:
+            for record in csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE):
+                illustration_dimensions[record["file"]] = Dimensions(int(record["width"]), int(record["height"]))
+        return illustration_dimensions

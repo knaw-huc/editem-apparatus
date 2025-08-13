@@ -13,3 +13,4 @@ class EditemApparatusConfig:
     log_file_path: Optional[str] = None
     graphic_url_mapper: Optional[Callable[[str], str]] = None
     file_url_prefix: str = ""
+    illustration_sizes_file:str = ""
