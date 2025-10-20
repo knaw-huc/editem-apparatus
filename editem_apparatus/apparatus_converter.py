@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 import xml.sax
 from dataclasses import dataclass
 from typing import Any, Dict
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 import xmltodict
 from loguru import logger
@@ -43,7 +44,7 @@ class ApparatusConverter:
         self.illustration_dimensions = self._load_illustration_dimensions(config.illustration_sizes_file)
         if not config.show_progress:
             logger.remove()
-            logger.add(sys.stdout, level="WARNING")
+            logger.add(sys.stderr, level="WARNING")
         if config.log_file_path:
             logger.remove()
             if os.path.exists(config.log_file_path):
@@ -367,3 +368,39 @@ class ApparatusConverter:
                 for record in csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE):
                     illustration_dimensions[record["file"]] = Dimensions(int(record["width"]), int(record["height"]))
         return illustration_dimensions
+
+def main():
+    parser = ArgumentParser(
+        description="Extract structured data from editem apparatus tei xml",
+        formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-p','--project', help="Project name", type=str, required=True)
+    parser.add_argument('-i','--inputdir', help="Input (data) Directory", type=str, required=True)
+    parser.add_argument('-o','--outputdir', help="Output (export) Directory", type=str, required=True)
+    parser.add_argument('-b','--base-url', help="URL for the IIIF image server (scheme + server + prefix)", type=str, required=True)
+    parser.add_argument('-l','--logfile', help="Log file (output)", type=str, default=None)
+    parser.add_argument('-s','--sizes', help="Sizes file", type=str, required=True)
+    args = parser.parse_args()
+
+    def urlmapper(url):
+        return f"{args.base_url}/{args.project}|illustrations|{url}.jpg"
+
+    config = EditemApparatusConfig(
+        project_name=args.project,
+        data_path=args.inputdir,
+        export_path=args.outputdir,
+        show_progress=False,
+        graphic_url_mapper=urlmapper,
+        log_file_path=args.logfile,
+        illustration_sizes_file=args.sizes,
+    )
+
+    errors = ApparatusConverter(config).convert()
+    if errors:
+        for error in errors:
+            logger.error(error)
+        sys.exit(1)
+    else:
+        sys.exit(0)
+
+if __name__ == '__main__':
+    main()
