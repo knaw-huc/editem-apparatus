@@ -2,7 +2,7 @@
 name = "editem-apparatus"
 version = "0.1.0"
 description = "Extract structured data from editem apparatus xml"
-authors = ["Bram Buitendijk <bram.buitendijk@di.huc.knaw.nl>"]
+authors = ["Bram Buitendijk <bram.buitendijk@di.huc.knaw.nl>", "Maarten van Gompel <proycon@anaproy.nl>"]
 readme = "README.md"
 license = "MIT"
 packages = [{ include = "editem_apparatus" }]
@@ -15,7 +15,7 @@ loguru = "^0.7.0"
 xmltodict = "^0.14.2"
 toolz = "^1.0.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
 
 [tool.poetry.scripts]
