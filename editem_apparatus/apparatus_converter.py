@@ -385,7 +385,7 @@ def main():
         return f"{args.base_url}/{args.project}|illustrations|{url}.jpg"
 
     config = EditemApparatusConfig(
-        project_name=args.project_name,
+        project_name=args.project,
         data_path=args.inputdir,
         export_path=args.outputdir,
         show_progress=False,
