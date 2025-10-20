@@ -1,26 +1,32 @@
-[tool.poetry]
+[project]
 name = "editem-apparatus"
 version = "0.1.0"
 description = "Extract structured data from editem apparatus xml"
-authors = ["Bram Buitendijk <bram.buitendijk@di.huc.knaw.nl>", "Maarten van Gompel <proycon@anaproy.nl>"]
+authors = [
+    { name = "Bram Buitendijk", email = "bram.buitendijk@di.huc.knaw.nl" },
+    { name = "Maarten van Gompel", email = "proycon@anaproy.nl" },
+]
 readme = "README.md"
 license = "MIT"
 packages = [{ include = "editem_apparatus" }]
+requires-python = ">=3.11"
+dependendcies = [
+    "dataclasses-json>0.6.7",
+    "icecream>2.1.2",
+    "loguru>0.7.0",
+    "xmltodict>0.14.2",
+    "toolz>1.0.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-dataclasses-json = "^0.6.7"
-icecream = "^2.1.2"
-loguru = "^0.7.0"
-xmltodict = "^0.14.2"
-toolz = "^1.0.0"
-
-[tool.poetry.group.dev.dependencies]
+[project.group.dev.dependencies]
 pytest = "^8.3.5"
 
-[tool.poetry.scripts]
+[project.scripts]
 version = 'poetry_scripts:version'
 editem-apparatus-convert = "editem_apparatus.apparatus_converter:main"
+
+[project.urls]
+"Bug Tracker" = "https://github.com/brambg/editem-apparatus/issues"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -33,6 +39,3 @@ filterwarnings = [
     # note the use of single quote below to denote "raw" strings in TOML
     'ignore:TestResult has no addDuration method',
 ]
-
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/brambg/editem-apparatus/issues"
