@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 packages = [{ include = "editem_apparatus" }]
 requires-python = ">=3.11"
-dependendcies = [
+dependencies = [
     "dataclasses-json>0.6.7",
     "icecream>2.1.2",
     "loguru>0.7.0",
