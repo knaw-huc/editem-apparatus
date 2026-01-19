@@ -41,7 +41,10 @@ class ApparatusConverter:
         self.file_url_prefix = config.file_url_prefix
         self.errors = []
         self.generated_file_urls = []
-        self.illustration_dimensions = self._load_illustration_dimensions(config.illustration_sizes_file)
+        if config.illustration_sizes_file:
+            self.illustration_dimensions = self._load_illustration_dimensions(config.illustration_sizes_file)
+        else:
+            self.illustration_dimensions = {}
         if not config.show_progress:
             logger.remove()
             logger.add(sys.stderr, level="WARNING")
@@ -378,7 +381,7 @@ def main():
     parser.add_argument('-o','--outputdir', help="Output (export) Directory", type=str, required=True)
     parser.add_argument('-b','--base-url', help="URL for the IIIF image server (scheme + server + prefix)", type=str, required=True)
     parser.add_argument('-l','--logfile', help="Log file (output)", type=str, default=None)
-    parser.add_argument('-s','--sizes', help="Illustration sizes file", type=str, required=True)
+    parser.add_argument('-s','--sizes', help="Illustration sizes file", type=str)
     args = parser.parse_args()
 
     def urlmapper(url):
