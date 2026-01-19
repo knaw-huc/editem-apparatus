@@ -378,7 +378,7 @@ def main():
     parser.add_argument('-o','--outputdir', help="Output (export) Directory", type=str, required=True)
     parser.add_argument('-b','--base-url', help="URL for the IIIF image server (scheme + server + prefix)", type=str, required=True)
     parser.add_argument('-l','--logfile', help="Log file (output)", type=str, default=None)
-    parser.add_argument('-s','--sizes', help="Sizes file", type=str, required=True)
+    parser.add_argument('-s','--sizes', help="Illustration sizes file", type=str, required=True)
     args = parser.parse_args()
 
     def urlmapper(url):
