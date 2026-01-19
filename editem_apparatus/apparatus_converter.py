@@ -320,7 +320,10 @@ class ApparatusConverter:
             if len(surnames) == 1:
                 return surnames[0]
             elif len(surnames) == 2:
-                return f"{surnames[0]} ({surnames[1]['text']})"
+                if isinstance(surnames[1],str):
+                    return f"{surnames[0]} ({surnames[1]})"
+                else:
+                    return f"{surnames[0]} ({surnames[1]['text']})"
             else:
                 return ""
         else:
