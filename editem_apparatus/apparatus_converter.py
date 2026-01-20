@@ -281,11 +281,15 @@ class ApparatusConverter:
         if len(pers_names) == 1:
             return pers_names[0]
         else:
-            abb = [pn for pn in pers_names if pn["full"] == "abb"][0]
-            if "forename" in abb:
-                return abb
+            abbs = [pn for pn in pers_names if pn["full"] == "abb"]
+            if abbs:
+                abb = abbs[0]
+                if "forename" in abb:
+                    return abb
+                else:
+                    return [pn for pn in pers_names if "forename" in pn][0]
             else:
-                return [pn for pn in pers_names if "forename" in pn][0]
+                return pers_names[0]
 
     @staticmethod
     def _display_label(pers_name: NormalizedPersName) -> str:
