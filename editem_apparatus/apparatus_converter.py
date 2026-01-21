@@ -389,6 +389,7 @@ def main():
     parser.add_argument('-b','--base-url', help="URL for the IIIF image server (scheme + server + prefix)", type=str, required=True)
     parser.add_argument('-l','--logfile', help="Log file (output)", type=str, default=None)
     parser.add_argument('-s','--sizes', help="Illustration sizes file", type=str)
+    parser.add_argument('--ignore-errors', help="Ignore errors", action='store_true')
     args = parser.parse_args()
 
     def urlmapper(url):
@@ -408,7 +409,10 @@ def main():
     if errors:
         for error in errors:
             logger.error(error)
-        sys.exit(1)
+        if args.ignore_errors:
+            sys.exit(0)
+        else:
+            sys.exit(1)
     else:
         sys.exit(0)
 
