@@ -41,7 +41,10 @@ class ApparatusConverter:
         self.file_url_prefix = config.file_url_prefix
         self.errors = []
         self.generated_file_urls = []
-        self.illustration_dimensions = self._load_illustration_dimensions(config.illustration_sizes_file)
+        if config.illustration_sizes_file:
+            self.illustration_dimensions = self._load_illustration_dimensions(config.illustration_sizes_file)
+        else:
+            self.illustration_dimensions = {}
         if not config.show_progress:
             logger.remove()
             logger.add(sys.stderr, level="WARNING")
@@ -278,11 +281,15 @@ class ApparatusConverter:
         if len(pers_names) == 1:
             return pers_names[0]
         else:
-            abb = [pn for pn in pers_names if pn["full"] == "abb"][0]
-            if "forename" in abb:
-                return abb
+            abbs = [pn for pn in pers_names if pn["full"] == "abb"]
+            if abbs:
+                abb = abbs[0]
+                if "forename" in abb:
+                    return abb
+                else:
+                    return [pn for pn in pers_names if "forename" in pn][0]
             else:
-                return [pn for pn in pers_names if "forename" in pn][0]
+                return pers_names[0]
 
     @staticmethod
     def _display_label(pers_name: NormalizedPersName) -> str:
@@ -317,7 +324,10 @@ class ApparatusConverter:
             if len(surnames) == 1:
                 return surnames[0]
             elif len(surnames) == 2:
-                return f"{surnames[0]} ({surnames[1]['text']})"
+                if isinstance(surnames[1],str):
+                    return f"{surnames[0]} ({surnames[1]})"
+                else:
+                    return f"{surnames[0]} ({surnames[1]['text']})"
             else:
                 return ""
         else:
@@ -378,7 +388,8 @@ def main():
     parser.add_argument('-o','--outputdir', help="Output (export) Directory", type=str, required=True)
     parser.add_argument('-b','--base-url', help="URL for the IIIF image server (scheme + server + prefix)", type=str, required=True)
     parser.add_argument('-l','--logfile', help="Log file (output)", type=str, default=None)
-    parser.add_argument('-s','--sizes', help="Illustration sizes file", type=str, required=True)
+    parser.add_argument('-s','--sizes', help="Illustration sizes file", type=str)
+    parser.add_argument('--ignore-errors', help="Ignore errors", action='store_true')
     args = parser.parse_args()
 
     def urlmapper(url):
@@ -398,7 +409,10 @@ def main():
     if errors:
         for error in errors:
             logger.error(error)
-        sys.exit(1)
+        if args.ignore_errors:
+            sys.exit(0)
+        else:
+            sys.exit(1)
     else:
         sys.exit(0)
 
