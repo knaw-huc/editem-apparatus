@@ -5,9 +5,9 @@ import sys
 import traceback
 import xml.etree.ElementTree as ET
 import xml.sax
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from dataclasses import dataclass
 from typing import Any, Dict
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 import xmltodict
 from loguru import logger
@@ -100,7 +100,8 @@ class ApparatusConverter:
         identified_elements = text_node.findall(".//*[@xml:id]", namespaces=ns)
         entity_dict: dict[str, Any] = {}
         entity_id_list: list[str] = []
-        for element in identified_elements:
+        relevant_identified_elements = [ie for ie in identified_elements if ie.tag != "{http://www.tei-c.org/ns/1.0}listObject"]
+        for element in relevant_identified_elements:
             xml_id = element.attrib.get(f'{{{ns["xml"]}}}id')
             if xml_id is not None:
                 xml_str = ET.tostring(element, encoding='UTF-8')
@@ -154,9 +155,12 @@ class ApparatusConverter:
     def _is_lang_type_object_list(self, value: Any) -> bool:
         return self._is_lang_object_list(value) and "type" in value[0]
 
+    def _is_lang_object_list(self, value: Any) -> bool:
+        return isinstance(value, list) and self._is_lang_object(value[0])
+
     @staticmethod
-    def _is_lang_object_list(value: Any) -> bool:
-        return isinstance(value, list) and isinstance(value[0], dict) and "lang" in value[0]
+    def _is_lang_object(value: Any) -> bool:
+        return isinstance(value, dict) and "lang" in value
 
     def _convert_object_list_value(self, in_value: Any) -> Any:
         if self._is_lang_type_object_list(in_value):
@@ -188,18 +192,23 @@ class ApparatusConverter:
                 other = "".join(i.values())
                 out_dict[lang] = other
             return out_dict
+        elif self._is_lang_object(in_value):
+            out_dict = {}
+            lang = in_value.pop("lang")
+            out_dict[lang] = "".join(in_value.values())
+            return out_dict
         else:
             return in_value
-
-    def _convert_lang_object_list_fields(
-            self, in_dict: dict[str, Any]
-    ) -> dict[str, Any]:
-        return {k: self._convert_object_list_value(v) for (k, v) in in_dict.items()}
 
     def _convert_all_object_lists_with_lang_fields_to_dict(
             self, in_dict: dict[str, dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
         return {k: self._convert_lang_object_list_fields(v) for (k, v) in in_dict.items()}
+
+    def _convert_lang_object_list_fields(
+            self, in_dict: dict[str, Any]
+    ) -> dict[str, Any]:
+        return {k: self._convert_object_list_value(v) for (k, v) in in_dict.items()}
 
     def _normalize_list_values(self, in_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
         def _set_value_as_list(d, path):
@@ -324,7 +333,7 @@ class ApparatusConverter:
             if len(surnames) == 1:
                 return surnames[0]
             elif len(surnames) == 2:
-                if isinstance(surnames[1],str):
+                if isinstance(surnames[1], str):
                     return f"{surnames[0]} ({surnames[1]})"
                 else:
                     return f"{surnames[0]} ({surnames[1]['text']})"
@@ -379,20 +388,26 @@ class ApparatusConverter:
                     illustration_dimensions[record["file"]] = Dimensions(int(record["width"]), int(record["height"]))
         return illustration_dimensions
 
+
 def main():
     parser = ArgumentParser(
         description="Extract structured data from editem apparatus tei xml",
         formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-p','--project', help="Project name", type=str, required=True)
-    parser.add_argument('-i','--inputdir', help="Input (data) Directory", type=str, required=True)
-    parser.add_argument('-o','--outputdir', help="Output (export) Directory", type=str, required=True)
-    parser.add_argument('-b','--base-url', help="URL for the IIIF image server (scheme + server + prefix)", type=str, required=True)
-    parser.add_argument('-l','--logfile', help="Log file (output)", type=str, default=None)
-    parser.add_argument('-s','--sizes', help="Illustration sizes file", type=str)
+    parser.add_argument('-p', '--project', help="Project name", type=str, required=True)
+    parser.add_argument('-i', '--inputdir', help="Input (data) Directory", type=str, required=True)
+    parser.add_argument('-o', '--outputdir', help="Output (export) Directory", type=str, required=True)
+    parser.add_argument('-b', '--base-url', help="URL for the IIIF image server (scheme + server + prefix)", type=str,
+                        required=True)
+    parser.add_argument('-l', '--logfile', help="Log file (output)", type=str, default=None)
+    parser.add_argument('-s', '--sizes', help="Illustration sizes file", type=str)
     parser.add_argument('--ignore-errors', help="Ignore errors", action='store_true')
     args = parser.parse_args()
 
-    def urlmapper(url):
+    if args.ignore_errors:
+        logger.remove()
+        logger.add(sink=sys.stderr, level="WARNING")
+
+    def url_mapper(url):
         return f"{args.base_url}/{args.project}|illustrations|{url}.jpg"
 
     config = EditemApparatusConfig(
@@ -400,7 +415,7 @@ def main():
         data_path=args.inputdir,
         export_path=args.outputdir,
         show_progress=False,
-        graphic_url_mapper=urlmapper,
+        graphic_url_mapper=url_mapper,
         log_file_path=args.logfile,
         illustration_sizes_file=args.sizes,
     )
@@ -415,6 +430,7 @@ def main():
             sys.exit(1)
     else:
         sys.exit(0)
+
 
 if __name__ == '__main__':
     main()
