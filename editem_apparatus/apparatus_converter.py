@@ -265,7 +265,7 @@ class ApparatusConverter:
         if self.graphic_url_mapper:
             new_dict = {}
             for entity_id, entity in entity_dict.items():
-                if "graphic" in entity and ("url" in entity["graphic"]):
+                if "graphic" in entity and ("url" in entity["graphic"]) and self.illustration_dimensions:
                     graphic_url = entity["graphic"]["url"]
                     entity["graphic"]["url"] = self.graphic_url_mapper(graphic_url)
                     dimensions = self.illustration_dimensions[graphic_url]
