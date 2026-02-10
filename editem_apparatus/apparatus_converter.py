@@ -262,10 +262,10 @@ class ApparatusConverter:
         return new_dict
 
     def _extend_graphic_annotation(self, entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
-        if self.graphic_url_mapper:
+        if self.graphic_url_mapper and self.illustration_dimensions:
             new_dict = {}
             for entity_id, entity in entity_dict.items():
-                if "graphic" in entity and ("url" in entity["graphic"]) and self.illustration_dimensions:
+                if "graphic" in entity and ("url" in entity["graphic"]):
                     graphic_url = entity["graphic"]["url"]
                     entity["graphic"]["url"] = self.graphic_url_mapper(graphic_url)
                     dimensions = self.illustration_dimensions[graphic_url]
