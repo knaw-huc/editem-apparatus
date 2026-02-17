@@ -10,11 +10,10 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 import xmltodict
-from loguru import logger
-from toolz import pipe
-
 from editem_apparatus.apparatus_handler import ApparatusHandler
 from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
+from loguru import logger
+from toolz import pipe
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
 
@@ -41,6 +40,7 @@ class ApparatusConverter:
         self.file_url_prefix = config.file_url_prefix
         self.errors = []
         self.generated_file_urls = []
+        self.illustration_sizes_file = config.illustration_sizes_file
         if config.illustration_sizes_file:
             self.illustration_dimensions = self._load_illustration_dimensions(config.illustration_sizes_file)
         else:
@@ -100,7 +100,8 @@ class ApparatusConverter:
         identified_elements = text_node.findall(".//*[@xml:id]", namespaces=ns)
         entity_dict: dict[str, Any] = {}
         entity_id_list: list[str] = []
-        relevant_identified_elements = [ie for ie in identified_elements if ie.tag != "{http://www.tei-c.org/ns/1.0}listObject"]
+        relevant_identified_elements = [ie for ie in identified_elements if
+                                        ie.tag != "{http://www.tei-c.org/ns/1.0}listObject"]
         for element in relevant_identified_elements:
             xml_id = element.attrib.get(f'{{{ns["xml"]}}}id')
             if xml_id is not None:
@@ -268,9 +269,14 @@ class ApparatusConverter:
                 if "graphic" in entity and ("url" in entity["graphic"]):
                     graphic_url = entity["graphic"]["url"]
                     entity["graphic"]["url"] = self.graphic_url_mapper(graphic_url)
-                    dimensions = self.illustration_dimensions[graphic_url]
-                    entity["graphic"]["width"] = dimensions.width
-                    entity["graphic"]["height"] = dimensions.height
+                    if graphic_url in self.illustration_dimensions:
+                        dimensions = self.illustration_dimensions[graphic_url]
+                        entity["graphic"]["width"] = dimensions.width
+                        entity["graphic"]["height"] = dimensions.height
+                    else:
+                        msg = f"missing width/height: no illustration dimensions found in {self.illustration_sizes_file} for <graphic url=\"{graphic_url}\"/>: no entry for file {graphic_url}"
+                        logger.warning(msg)
+                        self.errors.append(msg)
                 new_dict[entity_id] = entity
             return new_dict
         else:
