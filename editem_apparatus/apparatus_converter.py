@@ -299,7 +299,6 @@ class ApparatusConverter:
         elif len(pers_names) == 1:
             return pers_names[0]
         else:
-            ic(pers_names)
             abbs = [pn for pn in pers_names if pn["full"] == "abb"]
             if abbs:
                 abb = abbs[0]
