@@ -10,10 +10,11 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 import xmltodict
-from editem_apparatus.apparatus_handler import ApparatusHandler
-from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 from loguru import logger
 from toolz import pipe
+
+from editem_apparatus.apparatus_handler import ApparatusHandler
+from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
 
@@ -292,10 +293,13 @@ class ApparatusConverter:
         return new_dict
 
     @staticmethod
-    def _preferred_pers_name(pers_names: list[dict[str, Any]]) -> dict[str, Any]:
-        if len(pers_names) == 1:
+    def _preferred_pers_name(pers_names: dict[str, Any] | list[dict[str, Any]]) -> dict[str, Any]:
+        if isinstance(pers_names, dict):
+            return pers_names
+        elif len(pers_names) == 1:
             return pers_names[0]
         else:
+            ic(pers_names)
             abbs = [pn for pn in pers_names if pn["full"] == "abb"]
             if abbs:
                 abb = abbs[0]
@@ -361,17 +365,20 @@ class ApparatusConverter:
         return entity
 
     def _add_labels_to_refs(self):
+        label_for_ref = {}
         bio_path = f"{self.output_directory}/bio-entities.json"
-        with open(bio_path) as f:
-            bio_entities = json.load(f)
-        label_for_ref = {f"bio.xml#{b['id']}": b["displayLabel"] for b in bio_entities}
+        if os.path.exists(bio_path):
+            with open(bio_path) as f:
+                bio_entities = json.load(f)
+            label_for_ref = {f"bio.xml#{b['id']}": b["displayLabel"] for b in bio_entities}
         artwork_path = f"{self.output_directory}/artwork-entities.json"
-        with open(artwork_path) as f:
-            artwork_entities = json.load(f)
-        new_artwork_entities = [self._add_label_to_ref(a, label_for_ref) for a in
-                                artwork_entities]
-        with open(artwork_path, "w", encoding="utf8") as f:
-            json.dump(new_artwork_entities, f, indent=4, ensure_ascii=False)
+        if os.path.exists(artwork_path):
+            with open(artwork_path) as f:
+                artwork_entities = json.load(f)
+            new_artwork_entities = [self._add_label_to_ref(a, label_for_ref) for a in
+                                    artwork_entities]
+            with open(artwork_path, "w", encoding="utf8") as f:
+                json.dump(new_artwork_entities, f, indent=4, ensure_ascii=False)
 
     def _convert_to_html(self, xml_string: str, output_dir: str, base_name: str):
         handler = ApparatusHandler()
