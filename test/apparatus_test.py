@@ -48,6 +48,37 @@ class ApparatusTestCase(unittest.TestCase):
         self.assertEqual("Kees Kleykamp", new_dict['pers026']["displayLabel"])
         self.assertEqual("Kleykamp, Kees", new_dict['pers026']["sortLabel"])
 
+    def test_labels_for_person_with_add_and_gen_name(self):
+        cf = EditemApparatusConfig(
+            project_name="test",
+            data_path="data/test-apparatus/",
+            export_path="out/test"
+        )
+        ac = ApparatusConverter(cf)
+        person = {
+            "id": "pers026",
+            "sex": "1",
+            "persName": [
+                {
+                    "full": "yes",
+                    "forename": "Cornelis Gabriel",
+                    "surname": "Kleykamp",
+                    "addName": "Slugger",
+                    "genName": "Jr"
+                },
+            ],
+            "birth": {
+                "when": "1892"
+            },
+            "death": {
+                "when": "1964"
+            }
+        }
+        d = {person["id"]: person}
+        new_dict = ac._add_labels_for_persons(d)
+        self.assertEqual("Cornelis Gabriel Kleykamp Slugger Jr", new_dict['pers026']["displayLabel"])
+        self.assertEqual("Kleykamp Slugger Jr, Cornelis Gabriel", new_dict['pers026']["sortLabel"])
+
 
 if __name__ == '__main__':
     unittest.main()

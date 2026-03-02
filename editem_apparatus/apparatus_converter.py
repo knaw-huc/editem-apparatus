@@ -25,6 +25,7 @@ class NormalizedPersName:
     name_link: str
     surname: str
     add_name: str
+    gen_name: str
 
 
 @dataclass
@@ -311,13 +312,13 @@ class ApparatusConverter:
 
     @staticmethod
     def _display_label(pers_name: NormalizedPersName) -> str:
-        parts = [pers_name.forename, pers_name.name_link, pers_name.surname, pers_name.add_name]
+        parts = [pers_name.forename, pers_name.name_link, pers_name.surname, pers_name.add_name, pers_name.gen_name]
         non_empty_parts = [p for p in parts if p]
         return " ".join(non_empty_parts)
 
     @staticmethod
     def _sort_label(pers_name: NormalizedPersName) -> str:
-        parts = [pers_name.name_link.capitalize(), pers_name.surname, pers_name.add_name, pers_name.forename]
+        parts = [pers_name.name_link.capitalize(), pers_name.surname, pers_name.add_name, pers_name.gen_name, pers_name.forename]
         non_empty_parts = [p for p in parts if p]
         if len(non_empty_parts) == 1:
             return non_empty_parts[0]
@@ -329,8 +330,9 @@ class ApparatusConverter:
         name_link = pers_name.get("nameLink", "")
         surname = self._normalized_surname(pers_name)
         add_name = pers_name.get("addName", "")
+        gen_name = pers_name.get("genName", "")
         return NormalizedPersName(
-            forename, name_link, surname, add_name
+            forename, name_link, surname, add_name, gen_name
         )
 
     @staticmethod
