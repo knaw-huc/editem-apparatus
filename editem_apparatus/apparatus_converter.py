@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 import xml.sax
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import xmltodict
 from loguru import logger
@@ -21,6 +21,7 @@ ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
 
 @dataclass
 class NormalizedPersName:
+    full_name: str
     forename: str
     name_link: str
     surname: str
@@ -259,6 +260,11 @@ class ApparatusConverter:
             if "persName" in entity:
                 preferred_pers_name = self._preferred_pers_name(entity["persName"])
                 normalized_pers_name = self._normalized(preferred_pers_name)
+                if len("".join(
+                        [normalized_pers_name.forename, normalized_pers_name.name_link, normalized_pers_name.surname,
+                         normalized_pers_name.add_name, normalized_pers_name.gen_name])) == 0:
+                    logger.warning(
+                        f"no nameparts (forename, surname, etc.) found in Person #{entity_id}, using fullname for displayLabel/sortLabel")
                 entity["displayLabel"] = self._display_label(normalized_pers_name)
                 entity["sortLabel"] = self._sort_label(normalized_pers_name)
             new_dict[entity_id] = entity
@@ -294,7 +300,7 @@ class ApparatusConverter:
         return new_dict
 
     @staticmethod
-    def _preferred_pers_name(pers_names: dict[str, Any] | list[dict[str, Any]]) -> dict[str, Any]:
+    def _preferred_pers_name(pers_names: Union[dict[str, Any], list[dict[str, Any]]]) -> dict[str, Any]:
         if isinstance(pers_names, dict):
             return pers_names
         elif len(pers_names) == 1:
@@ -314,30 +320,36 @@ class ApparatusConverter:
     def _display_label(pers_name: NormalizedPersName) -> str:
         parts = [pers_name.forename, pers_name.name_link, pers_name.surname, pers_name.add_name, pers_name.gen_name]
         non_empty_parts = [p for p in parts if p]
+        if len(non_empty_parts) == 0:
+            non_empty_parts = pers_name.full_name
         return " ".join(non_empty_parts)
 
     @staticmethod
     def _sort_label(pers_name: NormalizedPersName) -> str:
-        parts = [pers_name.name_link.capitalize(), pers_name.surname, pers_name.add_name, pers_name.gen_name, pers_name.forename]
+        parts = [pers_name.name_link.capitalize(), pers_name.surname, pers_name.add_name, pers_name.gen_name,
+                 pers_name.forename]
         non_empty_parts = [p for p in parts if p]
         if len(non_empty_parts) == 1:
             return non_empty_parts[0]
+        elif len(non_empty_parts) == 0:
+            return pers_name.full_name
         else:
             return " ".join(non_empty_parts[:-1]) + ", " + non_empty_parts[-1]
 
     def _normalized(self, pers_name: dict[str, Any]) -> NormalizedPersName:
+        full_name = pers_name["name"]
         forename = pers_name.get("forename", "")
         name_link = pers_name.get("nameLink", "")
         surname = self._normalized_surname(pers_name)
         add_name = pers_name.get("addName", "")
         gen_name = pers_name.get("genName", "")
         return NormalizedPersName(
-            forename, name_link, surname, add_name, gen_name
+            full_name, forename, name_link, surname, add_name, gen_name
         )
 
     @staticmethod
     def _normalized_surname(pers_name: dict[str, Any]) -> str:
-        surnames: list[str] | str = pers_name.get("surname", [])
+        surnames: Union[list[str], str] = pers_name.get("surname", [])
         if isinstance(surnames, str):
             return surnames
         elif isinstance(surnames, list):
