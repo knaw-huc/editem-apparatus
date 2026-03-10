@@ -73,8 +73,7 @@ class ApparatusConverter:
         self._add_labels_to_refs()
         print("generated files:")
         for f in sorted(self.generated_file_urls):
-            url = f.replace(self.output_directory, "")
-            print(f"- {url}")
+            print(f"- {f}")
         return self.errors
 
     def _process_xml(self, xml_path: str, output_dir: str, base_name: str):
