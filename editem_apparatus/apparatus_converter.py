@@ -321,7 +321,7 @@ class ApparatusConverter:
         parts = [pers_name.forename, pers_name.name_link, pers_name.surname, pers_name.add_name, pers_name.gen_name]
         non_empty_parts = [p for p in parts if p]
         if len(non_empty_parts) == 0:
-            non_empty_parts = pers_name.full_name
+            non_empty_parts = [pers_name.full_name]
         return " ".join(non_empty_parts)
 
     @staticmethod
