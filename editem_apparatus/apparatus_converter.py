@@ -10,11 +10,10 @@ from dataclasses import dataclass
 from typing import Any, Dict, Union
 
 import xmltodict
-from loguru import logger
-from toolz import pipe
-
 from editem_apparatus.apparatus_handler import ApparatusHandler
 from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
+from loguru import logger
+from toolz import pipe
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
 
@@ -338,8 +337,12 @@ class ApparatusConverter:
     def _normalized(self, pers_name: dict[str, Any]) -> NormalizedPersName:
         full_name = pers_name.get("name", "")
         forename = pers_name.get("forename", "")
+        if forename is None:
+            forename = ""
         name_link = pers_name.get("nameLink", "")
         surname = self._normalized_surname(pers_name)
+        if surname is None:
+            surname = ""
         add_name = pers_name.get("addName", "")
         gen_name = pers_name.get("genName", "")
         return NormalizedPersName(
