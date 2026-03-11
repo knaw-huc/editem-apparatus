@@ -336,7 +336,7 @@ class ApparatusConverter:
             return " ".join(non_empty_parts[:-1]) + ", " + non_empty_parts[-1]
 
     def _normalized(self, pers_name: dict[str, Any]) -> NormalizedPersName:
-        full_name = pers_name["name"]
+        full_name = pers_name.get("name", "")
         forename = pers_name.get("forename", "")
         name_link = pers_name.get("nameLink", "")
         surname = self._normalized_surname(pers_name)
