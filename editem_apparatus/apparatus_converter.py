@@ -10,10 +10,11 @@ from dataclasses import dataclass
 from typing import Any, Dict, Union
 
 import xmltodict
-from editem_apparatus.apparatus_handler import ApparatusHandler
-from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 from loguru import logger
 from toolz import pipe
+
+from editem_apparatus.apparatus_handler import ApparatusHandler
+from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
 
@@ -335,26 +336,30 @@ class ApparatusConverter:
             return " ".join(non_empty_parts[:-1]) + ", " + non_empty_parts[-1]
 
     def _normalized(self, pers_name: dict[str, Any]) -> NormalizedPersName:
-        full_name = pers_name.get("name", "")
-        forename = pers_name.get("forename", "")
-        if forename is None:
-            forename = ""
-        name_link = pers_name.get("nameLink", "")
+        full_name = self._value(pers_name, "name")
+        forename = self._value(pers_name, "forename")
+        name_link = self._value(pers_name, "nameLink")
         surname = self._normalized_surname(pers_name)
-        if surname is None:
-            surname = ""
-        add_name = pers_name.get("addName", "")
-        gen_name = pers_name.get("genName", "")
+        add_name = self._value(pers_name, "addName")
+        gen_name = self._value(pers_name, "genName")
         return NormalizedPersName(
             full_name, forename, name_link, surname, add_name, gen_name
         )
 
     @staticmethod
+    def _value(pers_name: dict[str, Any], field: str) -> str:
+        value = pers_name.get(field, "")
+        if value is None:
+            return ""
+        return value
+
+    @staticmethod
     def _normalized_surname(pers_name: dict[str, Any]) -> str:
-        surnames: Union[list[str], str] = pers_name.get("surname", [])
-        if isinstance(surnames, str):
-            return surnames
-        elif isinstance(surnames, list):
+        surname_value: Union[list[str], str] = pers_name.get("surname", [])
+        if isinstance(surname_value, str):
+            return surname_value
+        elif isinstance(surname_value, list):
+            surnames = [s for s in surname_value if s is not None]
             if len(surnames) == 1:
                 return surnames[0]
             elif len(surnames) == 2:
