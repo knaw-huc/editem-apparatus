@@ -25,6 +25,7 @@ pytest = "^8.3.5"
 [project.scripts]
 version = 'poetry_scripts:version'
 editem-apparatus-convert = "editem_apparatus.apparatus_converter:main"
+editem-menu-convert = "editem_apparatus.menu_converter:main"
 
 [project.urls]
 "Bug Tracker" = "https://github.com/brambg/editem-apparatus/issues"
