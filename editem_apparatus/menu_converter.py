@@ -101,7 +101,7 @@ class MenuConverter:
                     new_node["items"] = self._simplify_menu(value)
                 elif key == "ptr":
                     # Compact ptr.target → target
-                    new_node["target"] = value["target"]
+                    new_node["target"] = value["target"].replace(".xml", "")
                 else:
                     new_node[key] = self._simplify_menu(value)
             return new_node
