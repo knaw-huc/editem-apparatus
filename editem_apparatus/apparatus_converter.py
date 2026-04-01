@@ -158,6 +158,9 @@ class ApparatusConverter:
     def _is_lang_type_object_list(self, value: Any) -> bool:
         return self._is_lang_object_list(value) and "type" in value[0]
 
+    def _is_lang_type_object(self, value: Any) -> bool:
+        return self._is_lang_object(value) and "type" in value
+
     def _is_lang_object_list(self, value: Any) -> bool:
         return isinstance(value, list) and self._is_lang_object(value[0])
 
@@ -180,11 +183,10 @@ class ApparatusConverter:
                 if "lang" in i:
                     lang = i.pop("lang")
                     o_type = i.pop("type")
-                    other = "".join(i.values())
-                    out_dict[lang][o_type] = other
+                    out_dict[lang][o_type] = self._simplify(i)
                 else:
                     o_type = i.pop("type")
-                    other = "".join(i.values())
+                    other = self._simplify(i)
                     out_dict["en"][o_type] = other
                     out_dict["nl"][o_type] = other
             return out_dict
@@ -192,16 +194,27 @@ class ApparatusConverter:
             out_dict = {}
             for i in in_value:
                 lang = i.pop("lang")
-                other = "".join(i.values())
-                out_dict[lang] = other
+                out_dict[lang] = self._simplify(i)
+            return out_dict
+        elif self._is_lang_type_object(in_value):
+            out_dict = {}
+            lang = in_value.pop("lang")
+            type = in_value.pop("type")
+            out_dict[lang] = {type: self._simplify(in_value)}
             return out_dict
         elif self._is_lang_object(in_value):
             out_dict = {}
             lang = in_value.pop("lang")
-            out_dict[lang] = "".join(in_value.values())
+            out_dict[lang] = self._simplify(in_value)
             return out_dict
         else:
             return in_value
+
+    @staticmethod
+    def _simplify(dict: dict[str, Any]) -> Any:
+        if len(dict) == 1 and "text" in dict:
+            return dict["text"]
+        return dict
 
     def _convert_all_object_lists_with_lang_fields_to_dict(
             self, in_dict: dict[str, dict[str, Any]]
