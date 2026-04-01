@@ -172,41 +172,25 @@ class ApparatusConverter:
         if self._is_lang_type_object_list(in_value):
             out_dict = {}
             for i in in_value:
-                if "lang" in i:
-                    lang = i["lang"]
-                    out_dict[lang] = {}
-                else:
-                    # TODO: make possible lang values configurable
-                    out_dict["nl"] = {}
-                    out_dict["en"] = {}
-            for i in in_value:
-                if "lang" in i:
-                    lang = i.pop("lang")
-                    o_type = i.pop("type")
-                    out_dict[lang][o_type] = self._simplify(i)
-                else:
-                    o_type = i.pop("type")
-                    other = self._simplify(i)
-                    out_dict["en"][o_type] = other
-                    out_dict["nl"][o_type] = other
+                langs = [i["lang"]] if "lang" in i else ["nl", "en"]
+                o_type = i.pop("type")
+                i.pop("lang", None)
+                simplified = self._simplify(i)
+                for lang in langs:
+                    out_dict.setdefault(lang, {})[o_type] = simplified
             return out_dict
         elif self._is_lang_object_list(in_value):
             out_dict = {}
             for i in in_value:
-                lang = i.pop("lang")
-                out_dict[lang] = self._simplify(i)
+                out_dict[i.pop("lang")] = self._simplify(i)
             return out_dict
         elif self._is_lang_type_object(in_value):
-            out_dict = {}
             lang = in_value.pop("lang")
-            type = in_value.pop("type")
-            out_dict[lang] = {type: self._simplify(in_value)}
-            return out_dict
+            o_type = in_value.pop("type")
+            return {lang: {o_type: self._simplify(in_value)}}
         elif self._is_lang_object(in_value):
-            out_dict = {}
             lang = in_value.pop("lang")
-            out_dict[lang] = self._simplify(in_value)
-            return out_dict
+            return {lang: self._simplify(in_value)}
         else:
             return in_value
 
