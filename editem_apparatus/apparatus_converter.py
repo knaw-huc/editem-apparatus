@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+import re
 import sys
 import traceback
 import xml.etree.ElementTree as ET
@@ -197,7 +198,7 @@ class ApparatusConverter:
     @staticmethod
     def _simplify(dict: dict[str, Any]) -> Any:
         if len(dict) == 1 and "text" in dict:
-            return dict["text"]
+            return re.sub(r'\s+', ' ', dict["text"]).strip()
         return dict
 
     def _convert_all_object_lists_with_lang_fields_to_dict(
