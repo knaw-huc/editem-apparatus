@@ -196,10 +196,10 @@ class ApparatusConverter:
             return in_value
 
     @staticmethod
-    def _simplify(dict: dict[str, Any]) -> Any:
-        if len(dict) == 1 and "text" in dict:
-            return re.sub(r'\s+', ' ', dict["text"]).strip()
-        return dict
+    def _simplify(d: dict[str, Any]) -> Any:
+        if len(d) == 1 and "text" in d:
+            return re.sub(r'\s+', ' ', d["text"]).strip()
+        return d
 
     def _convert_all_object_lists_with_lang_fields_to_dict(
             self, in_dict: dict[str, dict[str, Any]]
@@ -439,7 +439,10 @@ def main():
         logger.add(sink=sys.stderr, level="WARNING")
 
     def url_mapper(url):
-        return f"{args.base_url}/{args.project}|illustrations|{url}.jpg"
+        base = f"{args.base_url}/{args.project}|illustrations|{url}"
+        if "." in url: # some projects add the extension
+            return base
+        return f"{base}.jpg" # others don't, guess jpg extension
 
     config = EditemApparatusConfig(
         project_name=args.project,

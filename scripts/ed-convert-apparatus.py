@@ -4,6 +4,8 @@ from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 
 
 def graphic_url_mapper(url: str) -> str:
+    if "." in url:
+        return f"https://preview.dev.diginfra.org/iiif/3/israels|HuygensING|israels|illustrations|{url}"
     return f"https://preview.dev.diginfra.org/iiif/3/israels|HuygensING|israels|illustrations|{url}.jpg"
 
 
