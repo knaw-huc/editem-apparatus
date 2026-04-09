@@ -371,15 +371,20 @@ class ApparatusConverter:
             return ""
 
     def _add_label_to_ref(self, entity: dict[str, Any], label4ref: dict[str, str]) -> dict[str, Any]:
-        if "relation" in entity and "ref" in entity["relation"]:
-            ref = entity["relation"]["ref"]
-            if ref in label4ref:
-                entity["relation"]["label"] = label4ref[ref]
-            else:
-                error = f"invalid ref: {ref} for artwork.xml#{entity['id']}"
-                logger.error(error)
-                self.errors.append(error)
-                entity["relation"]["label"] = f"!no label found for ref {ref}"
+        if "relation" in entity:
+            relation = entity["relation"]
+            if isinstance(relation, dict):
+                relation = [relation]
+            for i, rel in enumerate(relation):
+                if "ref" in rel:
+                    ref = relation[i]["ref"]
+                    if ref in label4ref:
+                        relation[i]["label"] = label4ref[ref]
+                    else:
+                        error = f"invalid ref: {ref} for artwork.xml#{entity['id']}"
+                        logger.error(error)
+                        self.errors.append(error)
+                        relation[i]["label"] = f"!no label found for ref {ref}"
         return entity
 
     def _add_labels_to_refs(self):
