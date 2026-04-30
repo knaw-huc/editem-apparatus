@@ -55,7 +55,8 @@ class ApparatusHandler(ContentHandler):
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "listBibl":
-            self.html += '<div class="listBibl">'
+            xml_id = attributes["xml:id"]
+            self.html += f'<div class="listBibl" id="{xml_id}">'
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "p":

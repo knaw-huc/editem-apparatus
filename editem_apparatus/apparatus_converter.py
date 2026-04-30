@@ -1,4 +1,5 @@
 import csv
+import itertools
 import json
 import os
 import re
@@ -11,11 +12,10 @@ from dataclasses import dataclass
 from typing import Any, Dict, Union
 
 import xmltodict
-from loguru import logger
-from toolz import pipe
-
 from editem_apparatus.apparatus_handler import ApparatusHandler
 from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
+from loguru import logger
+from toolz import pipe
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
 
@@ -98,38 +98,55 @@ class ApparatusConverter:
 
         root = ET.fromstring(xml)
         text_node = root.find(".//{http://www.tei-c.org/ns/1.0}text")
-
-        # export all elements with xml:id to json files
-        identified_elements = text_node.findall(".//*[@xml:id]", namespaces=ns)
-        entity_dict: dict[str, Any] = {}
-        entity_id_list: list[str] = []
-        relevant_identified_elements = [ie for ie in identified_elements if
-                                        ie.tag != "{http://www.tei-c.org/ns/1.0}listObject"]
-        for element in relevant_identified_elements:
-            xml_id = element.attrib.get(f'{{{ns["xml"]}}}id')
-            if xml_id is not None:
-                xml_str = ET.tostring(element, encoding='UTF-8')
-                parsed_dict = xmltodict.parse(xml_str)
-                element_dict = self._simplify_keys(list(parsed_dict.values())[0])
-                # filepath = os.path.join(output_dir, f"{xml_id}.json")
-                # logger.info(f"=> {filepath}")
-                # with open(filepath, 'w') as f:
-                #     json.dump(element_dict, fp=f, indent=2, ensure_ascii=False)
-                entity_dict[f"{base_name}/{xml_id}"] = element_dict
-                entity_id_list.append(xml_id)
-
-        converted_entity_dict = pipe(
-            entity_dict,
-            self._convert_all_object_lists_with_lang_fields_to_dict,
-            self._normalize_list_values,
-            self._add_labels_for_persons,
-            self._extend_graphic_annotation,
-            self._convert_source_to_list
+        list_tags = ["listObject", "listBibl", "listPerson"]
+        list_elements = list(
+            itertools.chain.from_iterable(
+                [text_node.findall(".//{http://www.tei-c.org/ns/1.0}" + lt, namespaces=ns) for lt in list_tags]
+            )
         )
-        self._export_as_json(converted_entity_dict, f"{output_dir}/{base_name}-entity-dict.json")
-        self._export_as_json([converted_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
-                             f"{output_dir}/{base_name}-entities.json")
-        # TODO: sanity check on uniqueness of facet labels
+        if not list_elements:
+            list_elements = [text_node]
+
+        all_entity_dict = {}
+        for list_element in list_elements:
+            type = list_element.attrib.get(f'{{{ns["xml"]}}}id')
+            if type:
+                typed_base_name = f"{base_name}.{type}"
+            else:
+                typed_base_name = base_name
+
+            # export all elements with xml:id to json files
+            identified_elements = list_element.findall(".//*[@xml:id]", namespaces=ns)
+            entity_dict: dict[str, Any] = {}
+            entity_id_list: list[str] = []
+            relevant_identified_elements = [ie for ie in identified_elements if
+                                            ie.tag != "{http://www.tei-c.org/ns/1.0}listObject"]
+            for element in relevant_identified_elements:
+                xml_id = element.attrib.get(f'{{{ns["xml"]}}}id')
+                if xml_id is not None:
+                    xml_str = ET.tostring(element, encoding='UTF-8')
+                    parsed_dict = xmltodict.parse(xml_str)
+                    element_dict = self._simplify_keys(list(parsed_dict.values())[0])
+                    # filepath = os.path.join(output_dir, f"{xml_id}.json")
+                    # logger.info(f"=> {filepath}")
+                    # with open(filepath, 'w') as f:
+                    #     json.dump(element_dict, fp=f, indent=2, ensure_ascii=False)
+                    entity_dict[f"{base_name}/{xml_id}"] = element_dict
+                    entity_id_list.append(xml_id)
+
+            converted_entity_dict = pipe(
+                entity_dict,
+                self._convert_all_object_lists_with_lang_fields_to_dict,
+                self._normalize_list_values,
+                self._add_labels_for_persons,
+                self._extend_graphic_annotation,
+                self._convert_source_to_list
+            )
+            all_entity_dict.update(converted_entity_dict)
+            self._export_as_json([converted_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
+                                 f"{output_dir}/{typed_base_name}-entities.json")
+            # TODO: sanity check on uniqueness of facet labels
+        self._export_as_json(all_entity_dict, f"{output_dir}/{base_name}-entity-dict.json")
 
     def _export_as_json(self, data: Any, path: str):
         logger.info(f"=> {path}")
@@ -445,9 +462,9 @@ def main():
 
     def url_mapper(url):
         base = f"{args.base_url}/{args.project}|illustrations|{url}"
-        if "." in url: # some projects add the extension
+        if "." in url:  # some projects add the extension
             return base
-        return f"{base}.jpg" # others don't, guess jpg extension
+        return f"{base}.jpg"  # others don't, guess jpg extension
 
     config = EditemApparatusConfig(
         project_name=args.project,
