@@ -1,4 +1,5 @@
 import csv
+import glob
 import itertools
 import json
 import os
@@ -12,10 +13,11 @@ from dataclasses import dataclass
 from typing import Any, Dict, Union
 
 import xmltodict
-from editem_apparatus.apparatus_handler import ApparatusHandler
-from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 from loguru import logger
 from toolz import pipe
+
+from editem_apparatus.apparatus_handler import ApparatusHandler
+from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
 
@@ -405,14 +407,17 @@ class ApparatusConverter:
         return entity
 
     def _add_labels_to_refs(self):
+        # load bio-entities
         label_for_ref = {}
         bio_path = f"{self.output_directory}/bio-entities.json"
         if os.path.exists(bio_path):
             with open(bio_path) as f:
                 bio_entities = json.load(f)
             label_for_ref = {f"bio.xml#{b['id']}": b["displayLabel"] for b in bio_entities}
-        artwork_path = f"{self.output_directory}/artwork-entities.json"
-        if os.path.exists(artwork_path):
+
+        # rewrite artwork.*-entities.json, add label to relation.ref elements
+        artwork_paths = glob.glob(f"{self.output_directory}/artwork.*-entities.json")
+        for artwork_path in artwork_paths:
             with open(artwork_path) as f:
                 artwork_entities = json.load(f)
             new_artwork_entities = [self._add_label_to_ref(a, label_for_ref) for a in
