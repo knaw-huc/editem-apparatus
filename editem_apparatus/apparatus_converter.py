@@ -142,7 +142,8 @@ class ApparatusConverter:
                 self._normalize_list_values,
                 self._add_labels_for_persons,
                 self._extend_graphic_annotation,
-                self._convert_source_to_list
+                self._convert_source_to_list,
+                self._convert_relation_to_list
             )
             all_entity_dict.update(converted_entity_dict)
             self._export_as_json([converted_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
@@ -312,6 +313,15 @@ class ApparatusConverter:
         for entity_id, entity in entity_dict.items():
             if "source" in entity:
                 entity["source"] = entity["source"].split(" ")
+            new_dict[entity_id] = entity
+        return new_dict
+
+    @staticmethod
+    def _convert_relation_to_list(entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        new_dict = {}
+        for entity_id, entity in entity_dict.items():
+            if "relation" in entity and isinstance(entity["relation"], dict):
+                entity["relation"] = [entity["relation"]]
             new_dict[entity_id] = entity
         return new_dict
 
