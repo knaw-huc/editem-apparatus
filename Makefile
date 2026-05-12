@@ -1,6 +1,13 @@
 all: help
 SHELL=/bin/bash
-#include .local/.env
+.SECONDARY:
+.DELETE_ON_ERROR:
+
+RED=\033[1;31m
+GREEN=\033[1;32m
+YELLOW=\033[1;33m
+BLUE=\033[1;34m
+RESET=\033[0m
 
 .PHONY: install
 install:
@@ -13,6 +20,10 @@ test:
 .PHONY: convert-apparatus-israels
 convert-apparatus-israels:
 	poetry run ./scripts/ed-convert-apparatus.py
+
+.PHONY: convert-apparatus-van-gogh
+convert-apparatus-van-gogh:
+	poetry run editem-apparatus-convert --project van-gogh --inputdir ../projects/van-gogh-pipeline/datasource/tei/apparatus/ --outputdir out/van-gogh --base-url https://example.org
 
 .PHONY: version-update-patch
 version-update-patch:
@@ -28,14 +39,15 @@ version-update-major:
 
 .PHONY: help
 help:
-	@echo "make-tools for editem-apparatus"
+	@echo -e "make-tools for $(GREEN)editem-apparatus$(RESET)"
 	@echo
-	@echo "Please use \`make <target>', where <target> is one of:"
-	@echo "  install  - to install the necessary requirements"
-	@echo "  test     - to run the unit tests in test/"
+	@echo -e "Please use \`$(YELLOW)make <target>$(RESET)', where $(YELLOW)<target>$(RESET) is one of:"
+	@echo -e "  $(BLUE)install$(RESET)  - to install the necessary requirements"
+	@echo -e "  $(BLUE)test$(RESET)     - to run the unit tests in test/"
 	@echo
-	@echo "  convert-apparatus-israels - convert the israels apparatus files"
+	@echo -e "  $(BLUE)convert-apparatus-israels$(RESET)  - convert the israels apparatus files"
+	@echo -e "  $(BLUE)convert-apparatus-van-gogh$(RESET) - convert the van-gogh apparatus files"
 	@echo
-	@echo "  version-update-patch  - to update the project version to the next patch version"
-	@echo "  version-update-minor  - to update the project version to the next minor version"
-	@echo "  version-update-major  - to update the project version to the next major version"
+	@echo -e "  $(BLUE)version-update-patch$(RESET)  - to update the project version to the next patch version"
+	@echo -e "  $(BLUE)version-update-minor$(RESET)  - to update the project version to the next minor version"
+	@echo -e "  $(BLUE)version-update-major$(RESET)  - to update the project version to the next major version"

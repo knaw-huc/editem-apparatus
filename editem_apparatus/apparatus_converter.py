@@ -435,7 +435,8 @@ class ApparatusConverter:
             with open(artwork_path, "w", encoding="utf8") as f:
                 json.dump(new_artwork_entities, f, indent=4, ensure_ascii=False)
 
-    def _convert_to_html(self, xml_string: str, output_dir: str, base_name: str):
+    def _convert_to_html(self, xml_string: str, output_dir: str, base_name: str) -> None:
+        # toc = _head
         handler = ApparatusHandler()
         xml.sax.parseString(xml_string, handler)
         path = f"{output_dir}/{base_name}.html"

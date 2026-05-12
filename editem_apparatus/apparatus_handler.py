@@ -1,7 +1,8 @@
 import re
 from collections import deque
 from xml.sax import ContentHandler
-
+import html
+from icecream import ic
 
 class ApparatusHandler(ContentHandler):
     def __init__(self):
@@ -79,11 +80,12 @@ class ApparatusHandler(ContentHandler):
                     clazz = 'title'
                 self.html += f'<span class="{clazz}">'
                 self.close_tags[tag] = "</span>"
+                # ic(tag, self.close_tags)
 
         else:
             if self.capture:
                 self.unhandled_tags.add(tag)
-                self.html += f"<!-- open  {tag} {attributes.keys()} -->"
+                self.html += f"<!-- open {tag} {attributes.keys()} -->"
         self.parent_tag_stack.append(tag)
 
     def endElement(self, tag):
@@ -97,11 +99,13 @@ class ApparatusHandler(ContentHandler):
                     self.html += self.close_tags[tag]
                     self.close_tags.pop(tag)
                 else:
+                    # if self.close_tags:
+                    #     ic(tag, self.close_tags)
                     self.html += f"<!-- close {tag} -->\n"
 
     def characters(self, content):
         if self.capture:
-            self.html += linkify_urls(content.lstrip())
+            self.html += linkify_urls(html.escape(content))
 
     def processingInstruction(self, target, data):
         pass
