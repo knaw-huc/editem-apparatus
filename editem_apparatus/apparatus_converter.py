@@ -110,10 +110,12 @@ class ApparatusConverter:
             list_elements = [text_node]
 
         all_entity_dict = {}
+        entities_were_split = False
         for list_element in list_elements:
             type = list_element.attrib.get(f'{{{ns["xml"]}}}id')
             if type:
                 typed_base_name = f"{base_name}.{type}"
+                entities_were_split = True
             else:
                 typed_base_name = base_name
 
@@ -150,6 +152,8 @@ class ApparatusConverter:
                                  f"{output_dir}/{typed_base_name}-entities.json")
             # TODO: sanity check on uniqueness of facet labels
         self._export_as_json(all_entity_dict, f"{output_dir}/{base_name}-entity-dict.json")
+        if entities_were_split:
+            self._export_as_json(list(all_entity_dict.values()), f"{output_dir}/{base_name}-entities.json")
 
     def _export_as_json(self, data: Any, path: str):
         logger.info(f"=> {path}")
