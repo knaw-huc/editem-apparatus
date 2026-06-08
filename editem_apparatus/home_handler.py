@@ -22,7 +22,7 @@ class HomeHandler(ContentHandler):
             self.html += f"<!-- unhandled tags:\n{unhandled_tags_list} -->"
 
     def startElement(self, tag, attributes):
-        if tag == "titleStmt" or tag == "body":
+        if tag == "body":
             self.capture = True
 
         elif self.capture and tag == "bibl":
