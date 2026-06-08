@@ -1,11 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from typing_extensions import Callable
-
 
 @dataclass
-class EditemMenuConfig:
+class EditemConfig:
     data_path: str
     export_path: str
     show_progress: bool = False

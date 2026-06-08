@@ -9,13 +9,13 @@ import xmltodict
 from icecream import ic
 from loguru import logger
 
-from editem_apparatus.editem_menu_config import EditemMenuConfig
+from editem_apparatus.configs import EditemConfig
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
 
 
 class MenuConverter:
-    def __init__(self, config: EditemMenuConfig):
+    def __init__(self, config: EditemConfig):
         self.apparatus_directory = config.data_path.removesuffix("/")
         self.output_directory = config.export_path.removesuffix("/")
         self.file_url_prefix = config.file_url_prefix
@@ -140,7 +140,7 @@ def main():
         logger.remove()
         logger.add(sink=sys.stderr, level="WARNING")
 
-    config = EditemMenuConfig(
+    config = EditemConfig(
         data_path=args.inputdir,
         export_path=args.outputdir,
         show_progress=False,

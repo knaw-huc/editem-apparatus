@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-from editem_apparatus.editem_menu_config import EditemHomeConfig
-from editem_apparatus.menu_converter import MenuConverter
+
+from editem_apparatus.configs import EditemConfig
+from editem_apparatus.home_converter import HomeConverter
 
 
 def main():
-    cf = EditemHomeConfig(
+    cf = EditemConfig(
         data_path="data/van-gogh-config/",
         export_path="out",
         show_progress=True,
         file_url_prefix="http://localhost:8040/files/van-gogh/config/"
     )
-    errors = MenuConverter(cf).convert()
+    errors = HomeConverter(cf).convert()
     if errors:
         print("Errors:")
         for error in errors:
