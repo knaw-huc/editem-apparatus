@@ -36,8 +36,9 @@ class HomeHandler(ContentHandler):
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "head":
-            self.html += "<h3>"
-            self.close_tags[tag] = "</h3>"
+            level = attributes["level"]
+            self.html += f"<{level}>"
+            self.close_tags[tag] = f"</{level}>"
 
         elif self.capture and tag == "hi":
             rend = attributes["rend"]
@@ -86,7 +87,7 @@ class HomeHandler(ContentHandler):
         else:
             if self.capture:
                 self.unhandled_tags.add(tag)
-                self.html += f"<!-- open {tag} {attributes.keys()} -->"
+                # self.html += f"<!-- open {tag} {attributes.keys()} -->"
         self.parent_tag_stack.append(tag)
 
     def endElement(self, tag):
@@ -99,10 +100,10 @@ class HomeHandler(ContentHandler):
                 if tag in self.close_tags:
                     self.html += self.close_tags[tag]
                     self.close_tags.pop(tag)
-                else:
-                    # if self.close_tags:
-                    #     ic(tag, self.close_tags)
-                    self.html += f"<!-- close {tag} -->\n"
+                # else:
+                #     # if self.close_tags:
+                #     #     ic(tag, self.close_tags)
+                #     self.html += f"<!-- close {tag} -->\n"
 
     def characters(self, content):
         if self.capture:
