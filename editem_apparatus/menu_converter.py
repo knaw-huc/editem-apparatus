@@ -32,7 +32,7 @@ class MenuConverter:
 
     def convert(self) -> list[str]:
         base_dir = self.apparatus_directory
-        xml_files = [xml for xml in os.listdir(base_dir) if xml.endswith(".xml")]
+        xml_files = [xml for xml in os.listdir(base_dir) if xml.endswith("menu.xml")]
         for xml_file in xml_files:
             try:
                 base_name = xml_file.removesuffix(".xml")
