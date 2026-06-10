@@ -6,7 +6,7 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from typing import Any, Dict, Union
 
 import xmltodict
-from icecream import ic
+# from icecream import ic
 from loguru import logger
 
 from editem_apparatus.configs import EditemConfig
@@ -60,7 +60,6 @@ class MenuConverter:
         xpars = xmltodict.parse(xml)
         element_dict = self._simplify_keys(list(xpars.values())[0])
         menubar = element_dict["standOff"]["menubar"]
-        ic(menubar)
         simplified_menu = self._simplify_menu(menubar)
         # self._print_menu_node(simplified_menu)
         js = json.dumps(simplified_menu, indent=2, ensure_ascii=False)
@@ -99,7 +98,6 @@ class MenuConverter:
         if isinstance(node, dict):
             new_node = {}
             for key, value in node.items():
-                ic(key,value)
                 if key == "menuitem":
                     if isinstance(value, dict):
                         value_list = [value]
