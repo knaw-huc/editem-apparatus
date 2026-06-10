@@ -1,6 +1,7 @@
 import re
 from collections import deque
 from xml.sax import ContentHandler
+import html
 
 from loguru import logger
 
