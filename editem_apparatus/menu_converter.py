@@ -59,7 +59,9 @@ class MenuConverter:
         # export json conversion of complete xml file
         xpars = xmltodict.parse(xml)
         element_dict = self._simplify_keys(list(xpars.values())[0])
-        simplified_menu = self._simplify_menu(element_dict["standOff"]["menubar"])
+        menubar = element_dict["standOff"]["menubar"]
+        ic(menubar)
+        simplified_menu = self._simplify_menu(menubar)
         # self._print_menu_node(simplified_menu)
         js = json.dumps(simplified_menu, indent=2, ensure_ascii=False)
         path = f"{output_dir}/{base_name}.json"
@@ -97,12 +99,13 @@ class MenuConverter:
         if isinstance(node, dict):
             new_node = {}
             for key, value in node.items():
+                ic(key,value)
                 if key == "menuitem":
                     if isinstance(value, dict):
                         value_list = [value]
                     else:
                         value_list = value
-                    new_node["items"] = [self._simplify_keys(v) for v in value_list]
+                    new_node["items"] = [self._simplify_menu(v) for v in value_list]
                 elif key == "ptr":
                     # Compact ptr.target → target
                     new_node["target"] = value["target"].replace(".xml", "")

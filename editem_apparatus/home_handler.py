@@ -1,7 +1,12 @@
 import re
 from collections import deque
 from xml.sax import ContentHandler
-import html
+
+from loguru import logger
+
+TARGET = "target"
+FACET_ID = "facetID"
+
 
 class HomeHandler(ContentHandler):
     def __init__(self):
@@ -37,13 +42,17 @@ class HomeHandler(ContentHandler):
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "ed:search":
-            facetId = attributes["facetID"]
-            target = attributes["target"]
-            facet = f"{facetId}Id"
-            facet_value = target.split("#")[-1]
-            href = f"?query[terms][{facet}][]={facet_value}"
-            self.html += f'<a href="{href}">'
-            self.close_tags[tag] = "</a>"
+            if FACET_ID in attributes and TARGET in attributes:
+                facetId = attributes[FACET_ID]
+                target = attributes[TARGET]
+                facet = f"{facetId}Id"
+                facet_value = target.split("#")[-1]
+                href = f"?query[terms][{facet}][]={facet_value}"
+                self.html += f'<a href="{href}">'
+                self.close_tags[tag] = "</a>"
+            else:
+                logger.warning(
+                    f"{tag} element should have both `{FACET_ID}` and `{TARGET}` attributes, attributes found: {attributes.keys()}")
 
         elif self.capture and tag == "head":
             level = attributes["level"]
