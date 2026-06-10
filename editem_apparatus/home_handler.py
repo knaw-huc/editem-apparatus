@@ -1,7 +1,7 @@
+import html
 import re
 from collections import deque
 from xml.sax import ContentHandler
-import html
 
 from loguru import logger
 
@@ -11,7 +11,7 @@ FACET_ID = "facetID"
 
 class HomeHandler(ContentHandler):
     def __init__(self):
-        self.html = ""
+        self.html_string = ""
         self.capture = False
         self.parent_tag_stack = deque()
         self.close_tags = {}
@@ -23,7 +23,7 @@ class HomeHandler(ContentHandler):
     def endDocument(self):
         if self.unhandled_tags:
             unhandled_tags_list = '\n'.join(sorted(self.unhandled_tags))
-            self.html += f"<!-- unhandled tags:\n{unhandled_tags_list} -->"
+            self.html_string += f"<!-- unhandled tags:\n{unhandled_tags_list} -->"
 
     def startElement(self, tag, attributes):
         if tag == "body":
@@ -32,14 +32,14 @@ class HomeHandler(ContentHandler):
         elif self.capture and tag == "bibl":
             if 'xml:id' in attributes:
                 xml_id = attributes["xml:id"]
-                self.html += f'<div class="bibl" id="{xml_id}">'
+                self.html_string += f'<div class="bibl" id="{xml_id}">'
                 self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "div":
             div_class = "div"
             if "type" in attributes:
                 div_class = attributes["type"]
-            self.html += f'<div class="{div_class}">'
+            self.html_string += f'<div class="{div_class}">'
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "ed:search":
@@ -49,7 +49,7 @@ class HomeHandler(ContentHandler):
                 facet = f"{facetId}Id"
                 facet_value = target.split("#")[-1]
                 href = f"?query[terms][{facet}][]={facet_value}"
-                self.html += f'<a href="{href}">'
+                self.html_string += f'<a href="{href}">'
                 self.close_tags[tag] = "</a>"
             else:
                 logger.warning(
@@ -57,20 +57,20 @@ class HomeHandler(ContentHandler):
 
         elif self.capture and tag == "head":
             level = attributes["level"]
-            self.html += f"<{level}>"
+            self.html_string += f"<{level}>"
             self.close_tags[tag] = f"</{level}>"
 
         elif self.capture and tag == "hi":
             rend = attributes["rend"]
-            self.html += f'<span class="rend_{rend}">'
+            self.html_string += f'<span class="rend_{rend}">'
             self.close_tags[tag] = "</span>"
 
         elif self.capture and tag == "item":
-            self.html += '<div class="item">'
+            self.html_string += '<div class="item">'
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "label":
-            self.html += '<div class="label">'
+            self.html_string += '<div class="label">'
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "list":
@@ -78,32 +78,32 @@ class HomeHandler(ContentHandler):
                 clazz = f'list_{attributes["type"]}'
             else:
                 clazz = 'list'
-            self.html += f'<div class="{clazz}">'
+            self.html_string += f'<div class="{clazz}">'
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "listBibl":
             xml_id = attributes["xml:id"]
-            self.html += f'<div class="listBibl" id="{xml_id}">'
+            self.html_string += f'<div class="listBibl" id="{xml_id}">'
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "p":
             if "rend" in attributes:
                 rend = attributes["rend"]
-                self.html += f'<p class="rend_{rend}">'
+                self.html_string += f'<p class="rend_{rend}">'
             else:
-                self.html += "<p>"
+                self.html_string += "<p>"
             self.close_tags[tag] = "</p>"
 
         elif self.capture and tag == "title":
             if 'titleStmt' == self.parent_tag_stack[-1]:
-                self.html += f"<h2>"
+                self.html_string += f"<h2>"
                 self.close_tags[tag] = "</h2>"
             else:
                 if 'level' in attributes:
                     clazz = f'title_{attributes["level"]}'
                 else:
                     clazz = 'title'
-                self.html += f'<span class="{clazz}">'
+                self.html_string += f'<span class="{clazz}">'
                 self.close_tags[tag] = "</span>"
                 # ic(tag, self.close_tags)
 
@@ -121,7 +121,7 @@ class HomeHandler(ContentHandler):
         else:
             if self.capture:
                 if tag in self.close_tags:
-                    self.html += self.close_tags[tag]
+                    self.html_string += self.close_tags[tag]
                     self.close_tags.pop(tag)
                 # else:
                 #     # if self.close_tags:
@@ -130,7 +130,7 @@ class HomeHandler(ContentHandler):
 
     def characters(self, content):
         if self.capture:
-            self.html += linkify_urls(html.escape(content))
+            self.html_string += linkify_urls(html.escape(content))
 
     def processingInstruction(self, target, data):
         pass

@@ -60,7 +60,7 @@ class HomeConverter:
         path = f"{output_dir}/{base_name}.html"
         logger.info(f"=> {path}")
         with open(path, 'w', encoding="utf8") as f:
-            f.write(handler.html)
+            f.write(handler.html_string.strip())
         self.generated_file_urls.append(path)
 
 @logger.catch
