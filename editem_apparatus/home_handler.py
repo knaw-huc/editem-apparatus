@@ -1,8 +1,6 @@
 import re
 from collections import deque
 from xml.sax import ContentHandler
-
-from icecream import ic
 import html
 
 class HomeHandler(ContentHandler):
@@ -31,9 +29,21 @@ class HomeHandler(ContentHandler):
                 self.html += f'<div class="bibl" id="{xml_id}">'
                 self.close_tags[tag] = "</div>"
 
-        elif self.capture and tag == "label":
-            self.html += '<div class="label">'
+        elif self.capture and tag == "div":
+            div_class = "div"
+            if "type" in attributes:
+                div_class = attributes["type"]
+            self.html += f'<div class="{div_class}">'
             self.close_tags[tag] = "</div>"
+
+        elif self.capture and tag == "ed:search":
+            facetId = attributes["facetID"]
+            target = attributes["target"]
+            facet = f"{facetId}Id"
+            facet_value = target.split("#")[-1]
+            href = f"?query[terms][{facet}][]={facet_value}"
+            self.html += f'<a href="{href}">'
+            self.close_tags[tag] = "</a>"
 
         elif self.capture and tag == "head":
             level = attributes["level"]
@@ -47,6 +57,10 @@ class HomeHandler(ContentHandler):
 
         elif self.capture and tag == "item":
             self.html += '<div class="item">'
+            self.close_tags[tag] = "</div>"
+
+        elif self.capture and tag == "label":
+            self.html += '<div class="label">'
             self.close_tags[tag] = "</div>"
 
         elif self.capture and tag == "list":
@@ -68,7 +82,6 @@ class HomeHandler(ContentHandler):
                 self.html += f'<p class="rend_{rend}">'
             else:
                 self.html += "<p>"
-
             self.close_tags[tag] = "</p>"
 
         elif self.capture and tag == "title":
