@@ -4,11 +4,11 @@ import traceback
 import xml.sax
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
-from icecream import ic
 from loguru import logger
 
 from editem_apparatus.configs import EditemConfig
 from editem_apparatus.home_handler import HomeHandler
+from editem_apparatus.io_tools import IOHandler
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
 
@@ -19,7 +19,7 @@ class HomeConverter:
         self.output_directory = config.export_path.removesuffix("/")
         self.file_url_prefix = config.file_url_prefix
         self.errors = []
-        self.generated_file_urls = []
+        self.rw = IOHandler()
         if not config.show_progress:
             logger.remove()
             logger.add(sys.stderr, level="WARNING")
@@ -31,7 +31,7 @@ class HomeConverter:
 
     def convert(self) -> list[str]:
         base_dir = self.apparatus_directory
-        xml_files = [xml for xml in os.listdir(base_dir) if xml.endswith("home.xml")]
+        xml_files = [filename for filename in os.listdir(base_dir) if filename.endswith("home.xml")]
         for xml_file in xml_files:
             try:
                 base_name = xml_file.removesuffix(".xml")
@@ -42,26 +42,19 @@ class HomeConverter:
                 message = f"there was an error converting {xml_file}: {e}"
                 self.errors.append(message)
                 print(traceback.format_exc(), file=sys.stderr)
-        print("generated files:")
-        for f in sorted(self.generated_file_urls):
-            print(f"- {f}")
+        self.rw.report_generated_files()
         return self.errors
 
     def _process_xml(self, xml_path: str, output_dir: str, base_name: str):
-        logger.info(f"<= {xml_path}")
-        with open(xml_path, encoding="utf8") as f:
-            xml_source = f.read()
-
+        xml_source = self.rw.read_text(xml_path)
         self._convert_to_html(xml_source, output_dir, base_name)
 
     def _convert_to_html(self, xml_source: str, output_dir, base_name):
         handler = HomeHandler()
         xml.sax.parseString(xml_source, handler)
         path = f"{output_dir}/{base_name}.html"
-        logger.info(f"=> {path}")
-        with open(path, 'w', encoding="utf8") as f:
-            f.write(handler.html_string.strip())
-        self.generated_file_urls.append(path)
+        self.rw.write_text(path, handler.html_string.strip())
+
 
 @logger.catch
 def main():

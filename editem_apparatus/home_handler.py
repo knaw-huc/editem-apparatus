@@ -1,9 +1,10 @@
 import html
-import re
 from collections import deque
 from xml.sax import ContentHandler
 
 from loguru import logger
+
+from editem_apparatus.utils import linkify_urls
 
 TARGET = "target"
 FACET_ID = "facetID"
@@ -22,107 +23,107 @@ class HomeHandler(ContentHandler):
 
     def endDocument(self):
         if self.unhandled_tags:
-            unhandled_tags_list = '\n'.join(sorted(self.unhandled_tags))
-            self.html_string += f"<!-- unhandled tags:\n{unhandled_tags_list} -->"
+            unhandled_tags_list = '\n  '.join(sorted(self.unhandled_tags))
+            self.html_string += f"\n<!--\nunhandled tags:\n  {unhandled_tags_list}\n-->"
 
-    def startElement(self, tag, attributes):
-        if tag == "body":
+    def startElement(self, name, attrs):
+        if name == "body":
             self.capture = True
 
-        elif self.capture and tag == "bibl":
-            if 'xml:id' in attributes:
-                xml_id = attributes["xml:id"]
+        elif self.capture and name == "bibl":
+            if 'xml:id' in attrs:
+                xml_id = attrs["xml:id"]
                 self.html_string += f'<div class="bibl" id="{xml_id}">'
-                self.close_tags[tag] = "</div>"
+                self.close_tags[name] = "</div>"
 
-        elif self.capture and tag == "div":
+        elif self.capture and name == "div":
             div_class = "div"
-            if "type" in attributes:
-                div_class = attributes["type"]
+            if "type" in attrs:
+                div_class = attrs["type"]
             self.html_string += f'<div class="{div_class}">'
-            self.close_tags[tag] = "</div>"
+            self.close_tags[name] = "</div>"
 
-        elif self.capture and tag == "ed:search":
-            if FACET_ID in attributes and TARGET in attributes:
-                facetId = attributes[FACET_ID]
-                target = attributes[TARGET]
+        elif self.capture and name == "ed:search":
+            if FACET_ID in attrs and TARGET in attrs:
+                facetId = attrs[FACET_ID]
+                target = attrs[TARGET]
                 facet = f"{facetId}Id"
                 facet_value = target.split("#")[-1]
                 href = f"?query[terms][{facet}][]={facet_value}"
                 self.html_string += f'<a href="{href}">'
-                self.close_tags[tag] = "</a>"
+                self.close_tags[name] = "</a>"
             else:
                 logger.warning(
-                    f"{tag} element should have both `{FACET_ID}` and `{TARGET}` attributes, attributes found: {attributes.keys()}")
+                    f"{name} element should have both `{FACET_ID}` and `{TARGET}` attributes, attributes found: {attrs.keys()}")
 
-        elif self.capture and tag == "head":
-            level = attributes["level"]
+        elif self.capture and name == "head":
+            level = attrs["level"]
             self.html_string += f"<{level}>"
-            self.close_tags[tag] = f"</{level}>"
+            self.close_tags[name] = f"</{level}>"
 
-        elif self.capture and tag == "hi":
-            rend = attributes["rend"]
+        elif self.capture and name == "hi":
+            rend = attrs["rend"]
             self.html_string += f'<span class="rend_{rend}">'
-            self.close_tags[tag] = "</span>"
+            self.close_tags[name] = "</span>"
 
-        elif self.capture and tag == "item":
+        elif self.capture and name == "item":
             self.html_string += '<div class="item">'
-            self.close_tags[tag] = "</div>"
+            self.close_tags[name] = "</div>"
 
-        elif self.capture and tag == "label":
+        elif self.capture and name == "label":
             self.html_string += '<div class="label">'
-            self.close_tags[tag] = "</div>"
+            self.close_tags[name] = "</div>"
 
-        elif self.capture and tag == "list":
-            if "type" in attributes:
-                clazz = f'list_{attributes["type"]}'
+        elif self.capture and name == "list":
+            if "type" in attrs:
+                clazz = f'list_{attrs["type"]}'
             else:
                 clazz = 'list'
             self.html_string += f'<div class="{clazz}">'
-            self.close_tags[tag] = "</div>"
+            self.close_tags[name] = "</div>"
 
-        elif self.capture and tag == "listBibl":
-            xml_id = attributes["xml:id"]
+        elif self.capture and name == "listBibl":
+            xml_id = attrs["xml:id"]
             self.html_string += f'<div class="listBibl" id="{xml_id}">'
-            self.close_tags[tag] = "</div>"
+            self.close_tags[name] = "</div>"
 
-        elif self.capture and tag == "p":
-            if "rend" in attributes:
-                rend = attributes["rend"]
+        elif self.capture and name == "p":
+            if "rend" in attrs:
+                rend = attrs["rend"]
                 self.html_string += f'<p class="rend_{rend}">'
             else:
                 self.html_string += "<p>"
-            self.close_tags[tag] = "</p>"
+            self.close_tags[name] = "</p>"
 
-        elif self.capture and tag == "title":
+        elif self.capture and name == "title":
             if 'titleStmt' == self.parent_tag_stack[-1]:
-                self.html_string += f"<h2>"
-                self.close_tags[tag] = "</h2>"
+                self.html_string += "<h2>"
+                self.close_tags[name] = "</h2>"
             else:
-                if 'level' in attributes:
-                    clazz = f'title_{attributes["level"]}'
+                if 'level' in attrs:
+                    clazz = f'title_{attrs["level"]}'
                 else:
                     clazz = 'title'
                 self.html_string += f'<span class="{clazz}">'
-                self.close_tags[tag] = "</span>"
+                self.close_tags[name] = "</span>"
                 # ic(tag, self.close_tags)
 
         else:
             if self.capture:
-                self.unhandled_tags.add(tag)
+                self.unhandled_tags.add(name)
                 # self.html += f"<!-- open {tag} {attributes.keys()} -->"
-        self.parent_tag_stack.append(tag)
+        self.parent_tag_stack.append(name)
 
-    def endElement(self, tag):
+    def endElement(self, name):
         self.parent_tag_stack.pop()
 
-        if tag == "body" or tag == "titleStmt":
+        if name == "body" or name == "titleStmt":
             self.capture = False
         else:
             if self.capture:
-                if tag in self.close_tags:
-                    self.html_string += self.close_tags[tag]
-                    self.close_tags.pop(tag)
+                if name in self.close_tags:
+                    self.html_string += self.close_tags[name]
+                    self.close_tags.pop(name)
                 # else:
                 #     # if self.close_tags:
                 #     #     ic(tag, self.close_tags)
@@ -134,21 +135,3 @@ class HomeHandler(ContentHandler):
 
     def processingInstruction(self, target, data):
         pass
-
-
-# Match URLs starting with http(s) or www.
-url_pattern = re.compile(
-    r'(?P<url>(https?://|www\.)[^\s<>"\'()]+[^\s<>"\'(),.!?;:\]])?',
-    re.IGNORECASE
-)
-
-
-def linkify_urls(text: str) -> str:
-    def replace_with_link(match):
-        url = match.group('url')
-        if not url:
-            return match.group(0)
-        href = url if url.startswith('http') else f'https://{url}'
-        return f'<a href="{href}" target="_blank">{url}</a>'
-
-    return url_pattern.sub(replace_with_link, text)

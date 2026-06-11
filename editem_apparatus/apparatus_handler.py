@@ -1,12 +1,13 @@
-import re
+import html
 from collections import deque
 from xml.sax import ContentHandler
-import html
-from icecream import ic
+
+from editem_apparatus.utils import linkify_urls
+
 
 class ApparatusHandler(ContentHandler):
     def __init__(self):
-        self.html = ""
+        self.html_string = ""
         self.capture = False
         self.parent_tag_stack = deque()
         self.close_tags = {}
@@ -17,113 +18,95 @@ class ApparatusHandler(ContentHandler):
 
     def endDocument(self):
         if self.unhandled_tags:
-            unhandled_tags_list = '\n'.join(sorted(self.unhandled_tags))
-            self.html += f"<!-- unhandled tags:\n{unhandled_tags_list} -->"
+            unhandled_tags_list = '\n  '.join(sorted(self.unhandled_tags))
+            self.html_string += f"\n<!--\nunhandled tags:\n  {unhandled_tags_list}\n-->"
 
-    def startElement(self, tag, attributes):
-        if tag == "titleStmt" or tag == "body":
+    def startElement(self, name, attrs):
+        if name == "titleStmt" or name == "body":
             self.capture = True
 
-        elif self.capture and tag == "bibl":
-            if 'xml:id' in attributes:
-                xml_id = attributes["xml:id"]
-                self.html += f'<div class="bibl" id="{xml_id}">'
-                self.close_tags[tag] = "</div>"
+        elif self.capture and name == "bibl":
+            if 'xml:id' in attrs:
+                xml_id = attrs["xml:id"]
+                self.html_string += f'<div class="bibl" id="{xml_id}">'
+                self.close_tags[name] = "</div>"
 
-        elif self.capture and tag == "label":
-            self.html += '<div class="label">'
-            self.close_tags[tag] = "</div>"
+        elif self.capture and name == "label":
+            self.html_string += '<div class="label">'
+            self.close_tags[name] = "</div>"
 
-        elif self.capture and tag == "head":
-            self.html += "<h3>"
-            self.close_tags[tag] = "</h3>"
+        elif self.capture and name == "head":
+            self.html_string += "<h3>"
+            self.close_tags[name] = "</h3>"
 
-        elif self.capture and tag == "hi":
-            rend = attributes["rend"]
-            self.html += f'<span class="rend_{rend}">'
-            self.close_tags[tag] = "</span>"
+        elif self.capture and name == "hi":
+            rend = attrs["rend"]
+            self.html_string += f'<span class="rend_{rend}">'
+            self.close_tags[name] = "</span>"
 
-        elif self.capture and tag == "item":
-            self.html += '<div class="item">'
-            self.close_tags[tag] = "</div>"
+        elif self.capture and name == "item":
+            self.html_string += '<div class="item">'
+            self.close_tags[name] = "</div>"
 
-        elif self.capture and tag == "list":
-            if "type" in attributes:
-                clazz = f'list_{attributes["type"]}'
+        elif self.capture and name == "list":
+            if "type" in attrs:
+                clazz = f'list_{attrs["type"]}'
             else:
                 clazz = 'list'
-            self.html += f'<div class="{clazz}">'
-            self.close_tags[tag] = "</div>"
+            self.html_string += f'<div class="{clazz}">'
+            self.close_tags[name] = "</div>"
 
-        elif self.capture and tag == "listBibl":
-            xml_id = attributes["xml:id"]
-            self.html += f'<div class="listBibl" id="{xml_id}">'
-            self.close_tags[tag] = "</div>"
+        elif self.capture and name == "listBibl":
+            xml_id = attrs["xml:id"]
+            self.html_string += f'<div class="listBibl" id="{xml_id}">'
+            self.close_tags[name] = "</div>"
 
-        elif self.capture and tag == "p":
-            if "rend" in attributes:
-                rend = attributes["rend"]
-                self.html += f'<p class="rend_{rend}">'
+        elif self.capture and name == "p":
+            if "rend" in attrs:
+                rend = attrs["rend"]
+                self.html_string += f'<p class="rend_{rend}">'
             else:
-                self.html += "<p>"
+                self.html_string += "<p>"
 
-            self.close_tags[tag] = "</p>"
+            self.close_tags[name] = "</p>"
 
-        elif self.capture and tag == "title":
+        elif self.capture and name == "title":
             if 'titleStmt' == self.parent_tag_stack[-1]:
-                self.html += f"<h2>"
-                self.close_tags[tag] = "</h2>"
+                self.html_string += "<h2>"
+                self.close_tags[name] = "</h2>"
             else:
-                if 'level' in attributes:
-                    clazz = f'title_{attributes["level"]}'
+                if 'level' in attrs:
+                    clazz = f'title_{attrs["level"]}'
                 else:
                     clazz = 'title'
-                self.html += f'<span class="{clazz}">'
-                self.close_tags[tag] = "</span>"
+                self.html_string += f'<span class="{clazz}">'
+                self.close_tags[name] = "</span>"
                 # ic(tag, self.close_tags)
 
         else:
             if self.capture:
-                self.unhandled_tags.add(tag)
-                self.html += f"<!-- open {tag} {attributes.keys()} -->"
-        self.parent_tag_stack.append(tag)
+                self.unhandled_tags.add(name)
+                self.html_string += f"<!-- open {name} {attrs.keys()} -->"
+        self.parent_tag_stack.append(name)
 
-    def endElement(self, tag):
+    def endElement(self, name):
         self.parent_tag_stack.pop()
 
-        if tag == "body" or tag == "titleStmt":
+        if name == "body" or name == "titleStmt":
             self.capture = False
         else:
             if self.capture:
-                if tag in self.close_tags:
-                    self.html += self.close_tags[tag]
-                    self.close_tags.pop(tag)
+                if name in self.close_tags:
+                    self.html_string += self.close_tags[name]
+                    self.close_tags.pop(name)
                 else:
                     # if self.close_tags:
                     #     ic(tag, self.close_tags)
-                    self.html += f"<!-- close {tag} -->\n"
+                    self.html_string += f"<!-- close {name} -->\n"
 
     def characters(self, content):
         if self.capture:
-            self.html += linkify_urls(html.escape(content))
+            self.html_string += linkify_urls(html.escape(content))
 
     def processingInstruction(self, target, data):
         pass
-
-
-# Match URLs starting with http(s) or www.
-url_pattern = re.compile(
-    r'(?P<url>(https?://|www\.)[^\s<>"\'()]+[^\s<>"\'(),.!?;:\]])?',
-    re.IGNORECASE
-)
-
-
-def linkify_urls(text: str) -> str:
-    def replace_with_link(match):
-        url = match.group('url')
-        if not url:
-            return match.group(0)
-        href = url if url.startswith('http') else f'https://{url}'
-        return f'<a href="{href}" target="_blank">{url}</a>'
-
-    return url_pattern.sub(replace_with_link, text)

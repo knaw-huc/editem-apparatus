@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 import traceback
@@ -6,12 +5,14 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from typing import Any, Dict, Union
 
 import xmltodict
-# from icecream import ic
 from loguru import logger
 
 from editem_apparatus.configs import EditemConfig
+from editem_apparatus.io_tools import IOHandler
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
+
+rw = IOHandler()
 
 
 class MenuConverter:
@@ -20,7 +21,6 @@ class MenuConverter:
         self.output_directory = config.export_path.removesuffix("/")
         self.file_url_prefix = config.file_url_prefix
         self.errors = []
-        self.generated_file_urls = []
         if not config.show_progress:
             logger.remove()
             logger.add(sys.stderr, level="WARNING")
@@ -43,16 +43,11 @@ class MenuConverter:
                 message = f"there was an error converting {xml_file}: {e}"
                 self.errors.append(message)
                 print(traceback.format_exc(), file=sys.stderr)
-        print("generated files:")
-        for f in sorted(self.generated_file_urls):
-            print(f"- {f}")
+        rw.report_generated_files()
         return self.errors
 
     def _process_xml(self, xml_path: str, output_dir: str, base_name: str):
-        logger.info(f"<= {xml_path}")
-        with open(xml_path, encoding="utf8") as f:
-            xml_source = f.read()
-
+        xml_source = rw.read_text(xml_path)
         self._convert_to_json(xml_source, output_dir, base_name)
 
     def _convert_to_json(self, xml: str, output_dir: str, base_name: str):
@@ -62,12 +57,8 @@ class MenuConverter:
         menubar = element_dict["standOff"]["menubar"]
         simplified_menu = self._simplify_menu(menubar)
         # self._print_menu_node(simplified_menu)
-        js = json.dumps(simplified_menu, indent=2, ensure_ascii=False)
         path = f"{output_dir}/{base_name}.json"
-        logger.info(f"=> {path}")
-        with open(path, 'w', encoding="utf8") as f:
-            f.write(js)
-        self._add_generated_file(path)
+        rw.write_json(path, simplified_menu)
 
     def _simplify_keys(self, kv_dict: dict[str, Any]) -> dict[str, Any]:
         new_dict = {}
@@ -87,9 +78,6 @@ class MenuConverter:
                 else:
                     new_dict[simplified_key] = value
         return new_dict
-
-    def _add_generated_file(self, path: str):
-        self.generated_file_urls.append(f"{self.file_url_prefix}{path}")
 
     def _simplify_menu(self, node: Union[dict, list, str]) -> Union[dict, list, str]:
         if isinstance(node, list):

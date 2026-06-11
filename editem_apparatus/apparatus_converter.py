@@ -1,7 +1,6 @@
 import csv
 import glob
 import itertools
-import json
 import os
 import re
 import sys
@@ -18,8 +17,11 @@ from toolz import pipe
 
 from editem_apparatus.apparatus_handler import ApparatusHandler
 from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
+from editem_apparatus.io_tools import IOHandler
 
 ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
+
+rw = IOHandler()
 
 
 @dataclass
@@ -45,7 +47,6 @@ class ApparatusConverter:
         self.graphic_url_mapper = config.graphic_url_mapper
         self.file_url_prefix = config.file_url_prefix
         self.errors = []
-        self.generated_file_urls = []
         self.illustration_sizes_file = config.illustration_sizes_file
         if config.illustration_sizes_file:
             self.illustration_dimensions = self._load_illustration_dimensions(config.illustration_sizes_file)
@@ -74,15 +75,11 @@ class ApparatusConverter:
                 self.errors.append(message)
                 print(traceback.format_exc(), file=sys.stderr)
         self._add_labels_to_refs()
-        print("generated files:")
-        for f in sorted(self.generated_file_urls):
-            print(f"- {f}")
+        rw.report_generated_files()
         return self.errors
 
     def _process_xml(self, xml_path: str, output_dir: str, base_name: str):
-        logger.info(f"<= {xml_path}")
-        with open(xml_path, encoding="utf8") as f:
-            xml_source = f.read()
+        xml_source = rw.read_text(xml_path)
 
         self._convert_to_json(xml_source, output_dir, base_name)
         self._convert_to_html(xml_source, output_dir, base_name)
@@ -91,30 +88,28 @@ class ApparatusConverter:
         # export json conversion of complete xml file
         xpars = xmltodict.parse(xml)
         element_dict = self._simplify_keys(list(xpars.values())[0])
-        js = json.dumps(element_dict, indent=2, ensure_ascii=False)
         path = f"{output_dir}/{base_name}.json"
-        logger.info(f"=> {path}")
-        with open(path, 'w', encoding="utf8") as f:
-            f.write(js)
-        self._add_generated_file(path)
+        rw.write_json(path, element_dict)
 
+        list_elements = []
         root = ET.fromstring(xml)
         text_node = root.find(".//{http://www.tei-c.org/ns/1.0}text")
-        list_tags = ["listObject", "listBibl", "listPerson"]
-        list_elements = list(
-            itertools.chain.from_iterable(
-                [text_node.findall(".//{http://www.tei-c.org/ns/1.0}" + lt, namespaces=ns) for lt in list_tags]
+        if text_node is not None:
+            list_tags = ["listObject", "listBibl", "listPerson"]
+            list_elements = list(
+                itertools.chain.from_iterable(
+                    [text_node.findall(".//{http://www.tei-c.org/ns/1.0}" + lt, namespaces=ns) for lt in list_tags]
+                )
             )
-        )
-        if not list_elements:
-            list_elements = [text_node]
+            if not list_elements:
+                list_elements = [text_node]
 
         all_entity_dict = {}
         entities_were_split = False
-        for list_element in list_elements:
-            type = list_element.attrib.get(f'{{{ns["xml"]}}}id')
-            if type:
-                typed_base_name = f"{base_name}.{type}"
+        for list_element in [le for le in list_elements if le is not None]:
+            xml_id = list_element.attrib.get(f'{{{ns["xml"]}}}id')
+            if xml_id:
+                typed_base_name = f"{base_name}.{xml_id}"
                 entities_were_split = True
             else:
                 typed_base_name = base_name
@@ -156,10 +151,7 @@ class ApparatusConverter:
             self._export_as_json(list(all_entity_dict.values()), f"{output_dir}/{base_name}-entities.json")
 
     def _export_as_json(self, data: Any, path: str):
-        logger.info(f"=> {path}")
-        with open(path, 'w', encoding="utf8") as f:
-            json.dump(data, fp=f, indent=2, ensure_ascii=False)
-        self._add_generated_file(path)
+        rw.write_json(path, data)
 
     def _simplify_keys(self, kv_dict: dict[str, Any]) -> dict[str, Any]:
         new_dict = {}
@@ -425,32 +417,23 @@ class ApparatusConverter:
         label_for_ref = {}
         bio_path = f"{self.output_directory}/bio-entities.json"
         if os.path.exists(bio_path):
-            with open(bio_path) as f:
-                bio_entities = json.load(f)
+            bio_entities = rw.read_json(bio_path)
             label_for_ref = {f"bio.xml#{b['id']}": b["displayLabel"] for b in bio_entities}
 
         # rewrite artwork.*-entities.json, add label to relation.ref elements
         artwork_paths = glob.glob(f"{self.output_directory}/artwork.*-entities.json")
         for artwork_path in artwork_paths:
-            with open(artwork_path) as f:
-                artwork_entities = json.load(f)
+            artwork_entities = rw.read_json(artwork_path)
             new_artwork_entities = [self._add_label_to_ref(a, label_for_ref) for a in
                                     artwork_entities]
-            with open(artwork_path, "w", encoding="utf8") as f:
-                json.dump(new_artwork_entities, f, indent=4, ensure_ascii=False)
+            rw.write_json(artwork_path, new_artwork_entities)
 
     def _convert_to_html(self, xml_string: str, output_dir: str, base_name: str) -> None:
         # toc = _head
         handler = ApparatusHandler()
         xml.sax.parseString(xml_string, handler)
         path = f"{output_dir}/{base_name}.html"
-        logger.info(f"=> {path}")
-        with open(path, 'w', encoding="utf8") as f:
-            f.write(handler.html)
-        self._add_generated_file(path)
-
-    def _add_generated_file(self, path: str):
-        self.generated_file_urls.append(f"{self.file_url_prefix}{path}")
+        rw.write_text(path, handler.html_string)
 
     @staticmethod
     def _load_illustration_dimensions(illustration_sizes_file: str) -> dict[str, Dimensions]:
