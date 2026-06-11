@@ -13,6 +13,12 @@ RESET=\033[0m
 install:
 	poetry lock && poetry install
 
+.PHONY: code-check
+code-check:
+	ruff check .
+#	pylint editem_apparatus
+#	pyright .
+
 .PHONY: test
 test:
 	poetry run pytest
