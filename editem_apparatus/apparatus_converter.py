@@ -334,7 +334,11 @@ class ApparatusConverter:
                 if "forename" in abb:
                     return abb
                 else:
-                    return [pn for pn in pers_names if "forename" in pn][0]
+                    try:
+                        return [pn for pn in pers_names if "forename" in pn][0]
+                    except IndexError:
+                        #fallback
+                        return abb
             else:
                 return pers_names[0]
 
