@@ -57,8 +57,12 @@ class ApparatusHandler(ContentHandler):
             self.close_tags[name] = "</div>"
 
         elif self.capture and name == "listBibl":
-            xml_id = attrs["xml:id"]
-            self.html_string += f'<div class="listBibl" id="{xml_id}">'
+            if 'xml:id' in attrs:
+                xml_id = attrs["xml:id"]
+                self.html_string += f'<div class="listBibl" id="{xml_id}">'
+            else:
+                #MAYBE TODO: is the xml:id essential? do we want instead want to raise an error if it is missing?
+                self.html_string += f'<div class="listBibl">'
             self.close_tags[name] = "</div>"
 
         elif self.capture and name == "p":
