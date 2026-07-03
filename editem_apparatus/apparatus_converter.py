@@ -462,7 +462,8 @@ def main():
     parser.add_argument('-o', '--outputdir', help="Output (export) Directory", type=str, required=True)
     parser.add_argument('-b', '--base-url', help="URL for the IIIF image server (scheme + server + prefix)", type=str,
                         required=True)
-    parser.add_argument('-n', '--no-prefix', help="Do not add any further prefixes (defaults to 'project|illustrations|') to the base URL", action='store_true')
+    parser.add_argument('-n', '--no-prefix', help="Do not add any further prefixes (defaults to '{project}|illustrations|') to the base URL", action='store_true')
+    parser.add_argument('-X', '--no-extension', help="Actively strip the extension from the URL, by default one is always added (jpg is guessed by default)", action='store_true')
     parser.add_argument('-l', '--logfile', help="Log file (output)", type=str, default=None)
     parser.add_argument('-s', '--sizes', help="Illustration sizes file", type=str)
     parser.add_argument('--ignore-errors', help="Ignore errors", action='store_true')
@@ -479,9 +480,14 @@ def main():
             base += f"{url}"
         else:
             base += f"{args.project}|illustrations|{url}"
-        if url.endswith(('.jpg','.jpeg','.tif','.gif','.webp')):  # some projects add the extension
+        if args.no_extension:
+            if url.endswith(('.jpg','.jpeg','.tif','.gif','.png','.webp')):
+                base = ".".join(base.split('.')[:-1])
             return base
-        return f"{base}.jpg"  # others don't, guess jpg extension
+        else:
+            if not url.endswith(('.jpg','.jpeg','.tif','.gif','.png','.webp')):  # some projects don't add the extension
+                return f"{base}.jpg"  # guess one
+            return base
 
     config = EditemApparatusConfig(
         project_name=args.project,
