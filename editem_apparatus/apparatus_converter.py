@@ -50,6 +50,10 @@ class ApparatusConverter:
         self.illustration_sizes_file = config.illustration_sizes_file
         if config.illustration_sizes_file:
             self.illustration_dimensions = self._load_illustration_dimensions(config.illustration_sizes_file)
+            if len(self.illustration_dimensions) == 0:
+                message = "No illustrations were found in the sizes file!"
+                print(f"WARNING: {message}", file=sys.stderr)
+                self.errors.append(message)
         else:
             self.illustration_dimensions = {}
         if not config.show_progress:
@@ -458,6 +462,7 @@ def main():
     parser.add_argument('-o', '--outputdir', help="Output (export) Directory", type=str, required=True)
     parser.add_argument('-b', '--base-url', help="URL for the IIIF image server (scheme + server + prefix)", type=str,
                         required=True)
+    parser.add_argument('-n', '--no-prefix', help="Do not add any further prefixes (defaults to 'project|illustrations|') to the base URL", action='store_true')
     parser.add_argument('-l', '--logfile', help="Log file (output)", type=str, default=None)
     parser.add_argument('-s', '--sizes', help="Illustration sizes file", type=str)
     parser.add_argument('--ignore-errors', help="Ignore errors", action='store_true')
@@ -468,8 +473,13 @@ def main():
         logger.add(sink=sys.stderr, level="WARNING")
 
     def url_mapper(url):
-        base = f"{args.base_url}/{args.project}|illustrations|{url}"
-        if "." in url:  # some projects add the extension
+        base = args.base_url
+        if base[-1] != '/': base += '/'
+        if args.no_prefix:
+            base += f"{url}"
+        else:
+            base += f"{args.project}|illustrations|{url}"
+        if url.endswith(('.jpg','.jpeg','.tif','.gif','.webp')):  # some projects add the extension
             return base
         return f"{base}.jpg"  # others don't, guess jpg extension
 
