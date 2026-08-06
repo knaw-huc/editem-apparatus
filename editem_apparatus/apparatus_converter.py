@@ -403,7 +403,7 @@ class ApparatusConverter:
         else:
             return ""
 
-    def _add_label_to_ref(self, entity: dict[str, Any], label4ref: dict[str, str]) -> dict[str, Any]:
+    def _add_label_to_ref(self, entity: dict[str, Any], label4ref: dict[str, str], sort_label4ref: dict[str, str]) -> dict[str, Any]:
         if "relation" in entity:
             relation = entity["relation"]
             if isinstance(relation, dict):
@@ -412,31 +412,35 @@ class ApparatusConverter:
                 if "ref" in rel:
                     ref = relation[i]["ref"]
                     if ref in label4ref:
-                        relation[i]["label"] = label4ref[ref]
+                        relation[i]["displayLabel"] = label4ref[ref]
+                        relation[i]["sortLabel"] = sort_label4ref[ref]
                     else:
                         error = f"invalid ref: {ref} for artwork.xml#{entity['id']}"
                         logger.error(error)
                         self.errors.append(error)
-                        relation[i]["label"] = f"!no label found for ref {ref}"
+                        relation[i]["displayLabel"] = f"!no label found for ref {ref}"
         return entity
 
     def _add_labels_to_refs(self):
         # load bio-entities
         label_for_ref = {}
+        sort_label_for_ref = {}
         bio_path = f"{self.output_directory}/bio-entities.json"
         if os.path.exists(bio_path):
             bio_entities = rw.read_json(bio_path)
             label_for_ref = {f"bio.xml#{b['id']}": b["displayLabel"] for b in bio_entities}
+            sort_label_for_ref = {f"bio.xml#{b['id']}": b["sortLabel"] for b in bio_entities}
 
         # rewrite artwork.*-entities.json, add label to relation.ref elements
         artwork_paths = glob.glob(f"{self.output_directory}/artwork.*-entities.json")
         for artwork_path in artwork_paths:
             artwork_entities = rw.read_json(artwork_path)
-            new_artwork_entities = [self._add_label_to_ref(a, label_for_ref) for a in
+            new_artwork_entities = [self._add_label_to_ref(a, label_for_ref, sort_label_for_ref) for a in
                                     artwork_entities]
             rw.write_json(artwork_path, new_artwork_entities)
 
-    def _convert_to_html(self, xml_string: str, output_dir: str, base_name: str) -> None:
+    @staticmethod
+    def _convert_to_html(xml_string: str, output_dir: str, base_name: str) -> None:
         # toc = _head
         handler = ApparatusHandler()
         xml.sax.parseString(xml_string, handler)

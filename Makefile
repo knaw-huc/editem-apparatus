@@ -29,7 +29,7 @@ convert-apparatus-israels:
 
 .PHONY: convert-apparatus-van-gogh
 convert-apparatus-van-gogh:
-	poetry run editem-apparatus-convert --project van-gogh --inputdir ../projects/van-gogh-pipeline/datasource/tei/apparatus/ --outputdir out/van-gogh --base-url https://example.org
+	poetry run editem-apparatus-convert --project van-gogh --inputdir ../projects/van-gogh/datasource/tei/apparatus/ --outputdir out/van-gogh --base-url https://example.org
 
 .PHONY: version-update-patch
 version-update-patch:
