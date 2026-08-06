@@ -432,7 +432,7 @@ class ApparatusConverter:
             sort_label_for_ref = {f"bio.xml#{b['id']}": b["sortLabel"] for b in bio_entities}
 
         # rewrite artwork.*-entities.json, add label to relation.ref elements
-        artwork_paths = glob.glob(f"{self.output_directory}/artwork.*-entities.json")
+        artwork_paths = glob.glob(f"{self.output_directory}/artwork*-entities.json")
         for artwork_path in artwork_paths:
             artwork_entities = rw.read_json(artwork_path)
             new_artwork_entities = [self._add_label_to_ref(a, label_for_ref, sort_label_for_ref) for a in

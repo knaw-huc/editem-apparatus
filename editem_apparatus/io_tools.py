@@ -11,7 +11,7 @@ from loguru import logger
 class IOHandler:
 
     def __init__(self, file_url_prefix: str = ""):
-        self.generated_file_urls = []
+        self.generated_file_urls = set()
         self.file_url_prefix = file_url_prefix
 
     def write_text(self, path: str, text: str, quiet: bool = False) -> None:
@@ -65,7 +65,7 @@ class IOHandler:
             print(f"- {f}")
 
     def _add_generated_file(self, path: str):
-        self.generated_file_urls.append(f"{self.file_url_prefix}{path}")
+        self.generated_file_urls.add(f"{self.file_url_prefix}{path}")
 
     @staticmethod
     def _log_reading_file(path: str | Path, extra: str = "") -> None:
