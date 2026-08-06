@@ -154,7 +154,8 @@ class ApparatusConverter:
         if entities_were_split:
             self._export_as_json(list(all_entity_dict.values()), f"{output_dir}/{base_name}-entities.json")
 
-    def _export_as_json(self, data: Any, path: str):
+    @staticmethod
+    def _export_as_json(data: Any, path: str):
         rw.write_json(path, data)
 
     def _simplify_keys(self, kv_dict: dict[str, Any]) -> dict[str, Any]:
@@ -341,7 +342,7 @@ class ApparatusConverter:
                     try:
                         return [pn for pn in pers_names if "forename" in pn][0]
                     except IndexError:
-                        #fallback
+                        # fallback
                         return abb
             else:
                 return pers_names[0]
@@ -403,7 +404,8 @@ class ApparatusConverter:
         else:
             return ""
 
-    def _add_label_to_ref(self, entity: dict[str, Any], label4ref: dict[str, str], sort_label4ref: dict[str, str]) -> dict[str, Any]:
+    def _add_label_to_ref(self, entity: dict[str, Any], label4ref: dict[str, str], sort_label4ref: dict[str, str]) -> \
+            dict[str, Any]:
         if "relation" in entity:
             relation = entity["relation"]
             if isinstance(relation, dict):
@@ -438,6 +440,11 @@ class ApparatusConverter:
             new_artwork_entities = [self._add_label_to_ref(a, label_for_ref, sort_label_for_ref) for a in
                                     artwork_entities]
             rw.write_json(artwork_path, new_artwork_entities)
+        entity_dict_path = f"{self.output_directory}/artwork-entity-dict.json"
+        entity_dict = rw.read_json(entity_dict_path)
+        new_entity_dict = {k: self._add_label_to_ref(v, label_for_ref, sort_label_for_ref)
+                           for k, v in entity_dict.items()}
+        rw.write_json(entity_dict_path, new_entity_dict)
 
     @staticmethod
     def _convert_to_html(xml_string: str, output_dir: str, base_name: str) -> None:
@@ -466,8 +473,12 @@ def main():
     parser.add_argument('-o', '--outputdir', help="Output (export) Directory", type=str, required=True)
     parser.add_argument('-b', '--base-url', help="URL for the IIIF image server (scheme + server + prefix)", type=str,
                         required=True)
-    parser.add_argument('-n', '--no-prefix', help="Do not add any further prefixes (defaults to '{project}|illustrations|') to the base URL", action='store_true')
-    parser.add_argument('-X', '--no-extension', help="Actively strip the extension from the URL, by default one is always added (jpg is guessed by default)", action='store_true')
+    parser.add_argument('-n', '--no-prefix',
+                        help="Do not add any further prefixes (defaults to '{project}|illustrations|') to the base URL",
+                        action='store_true')
+    parser.add_argument('-X', '--no-extension',
+                        help="Actively strip the extension from the URL, by default one is always added (jpg is guessed by default)",
+                        action='store_true')
     parser.add_argument('-l', '--logfile', help="Log file (output)", type=str, default=None)
     parser.add_argument('-s', '--sizes', help="Illustration sizes file", type=str)
     parser.add_argument('--ignore-errors', help="Ignore errors", action='store_true')
@@ -486,11 +497,12 @@ def main():
         else:
             base += f"{args.project}|illustrations|{url}"
         if args.no_extension:
-            if url.endswith(('.jpg','.jpeg','.tif','.gif','.png','.webp')):
+            if url.endswith(('.jpg', '.jpeg', '.tif', '.gif', '.png', '.webp')):
                 base = ".".join(base.split('.')[:-1])
             return base
         else:
-            if not url.endswith(('.jpg','.jpeg','.tif','.gif','.png','.webp')):  # some projects don't add the extension
+            if not url.endswith(
+                    ('.jpg', '.jpeg', '.tif', '.gif', '.png', '.webp')):  # some projects don't add the extension
                 return f"{base}.jpg"  # guess one
             return base
 
