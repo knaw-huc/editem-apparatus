@@ -479,7 +479,8 @@ def main():
 
     def url_mapper(url):
         base = args.base_url
-        if base[-1] != '/': base += '/'
+        if base[-1] != '/':
+            base += '/'
         if args.no_prefix:
             base += f"{url}"
         else:

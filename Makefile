@@ -25,7 +25,7 @@ test:
 
 .PHONY: convert-apparatus-israels
 convert-apparatus-israels:
-	poetry run ./scripts/ed-convert-apparatus.py
+	poetry run editem-apparatus-convert --project israels --inputdir ../projects/israels/datasource/tei/apparatus/ --outputdir out/israels --base-url https://example.org
 
 .PHONY: convert-apparatus-van-gogh
 convert-apparatus-van-gogh:
