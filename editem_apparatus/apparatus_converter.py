@@ -441,10 +441,11 @@ class ApparatusConverter:
                                     artwork_entities]
             rw.write_json(artwork_path, new_artwork_entities)
         entity_dict_path = f"{self.output_directory}/artwork-entity-dict.json"
-        entity_dict = rw.read_json(entity_dict_path)
-        new_entity_dict = {k: self._add_label_to_ref(v, label_for_ref, sort_label_for_ref)
-                           for k, v in entity_dict.items()}
-        rw.write_json(entity_dict_path, new_entity_dict)
+        if os.path.exists(entity_dict_path):
+            entity_dict = rw.read_json(entity_dict_path)
+            new_entity_dict = {k: self._add_label_to_ref(v, label_for_ref, sort_label_for_ref)
+                               for k, v in entity_dict.items()}
+            rw.write_json(entity_dict_path, new_entity_dict)
 
     @staticmethod
     def _convert_to_html(xml_string: str, output_dir: str, base_name: str) -> None:
