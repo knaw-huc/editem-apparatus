@@ -383,6 +383,9 @@ class ApparatusConverter:
         value = pers_name.get(field, "")
         if value is None:
             return ""
+        elif isinstance(value, (list, tuple)):
+            value = ", ".join((x for x in value if isinstance(x,str)))
+            logger.warning(f"Expected string, got array for {field}, forcing concatenation to: '{value}'")
         return value
 
     @staticmethod
