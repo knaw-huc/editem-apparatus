@@ -144,7 +144,8 @@ class ApparatusConverter:
                 self._add_labels_for_persons,
                 self._extend_graphic_annotation,
                 self._convert_source_to_list,
-                self._convert_relation_to_list
+                self._convert_relation_to_list,
+                clean_none
             )
             all_entity_dict.update(converted_entity_dict)
             self._export_as_json([converted_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
@@ -467,6 +468,25 @@ class ApparatusConverter:
                     illustration_dimensions[record["file"]] = Dimensions(int(record["width"]), int(record["height"]))
         return illustration_dimensions
 
+# Source - https://stackoverflow.com/a/60124334
+# Posted by MatanRubin
+# Retrieved 2026-08-19, License - CC BY-SA 4.0
+
+def clean_nones(value):
+    """
+    Recursively remove all None values from dictionaries and lists, and returns
+    the result as a new dictionary or list.
+    """
+    if isinstance(value, list):
+        return [clean_nones(x) for x in value if x is not None]
+    elif isinstance(value, dict):
+        return {
+            key: clean_nones(val)
+            for key, val in value.items()
+            if val is not None
+        }
+    else:
+        return value
 
 def main():
     parser = ArgumentParser(
