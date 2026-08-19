@@ -145,7 +145,7 @@ class ApparatusConverter:
                 self._extend_graphic_annotation,
                 self._convert_source_to_list,
                 self._convert_relation_to_list,
-                clean_none
+                clean_nones
             )
             all_entity_dict.update(converted_entity_dict)
             self._export_as_json([converted_entity_dict[f"{base_name}/{k}"] for k in entity_id_list],
