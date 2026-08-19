@@ -157,7 +157,7 @@ class ApparatusConverter:
 
     @staticmethod
     def _export_as_json(data: Any, path: str):
-        rw.write_json(path, data)
+        rw.write_json(path, clean_nones(data))
 
     def _simplify_keys(self, kv_dict: dict[str, Any]) -> dict[str, Any]:
         new_dict = {}
@@ -176,7 +176,7 @@ class ApparatusConverter:
                     new_dict[simplified_key] = new_list
                 else:
                     new_dict[simplified_key] = value
-        return new_dict
+        return clean_nones(new_dict)
 
     def _is_lang_type_object_list(self, value: Any) -> bool:
         return self._is_lang_object_list(value) and "type" in value[0]
@@ -385,7 +385,7 @@ class ApparatusConverter:
         if value is None:
             return ""
         elif isinstance(value, (list, tuple)):
-            value = ", ".join((x for x in value if isinstance(x,str)))
+            value = ", ".join((x for x in value if isinstance(x, str)))
             logger.warning(f"Expected string, got array for {field}, forcing concatenation to: '{value}'")
         return value
 
@@ -468,11 +468,12 @@ class ApparatusConverter:
                     illustration_dimensions[record["file"]] = Dimensions(int(record["width"]), int(record["height"]))
         return illustration_dimensions
 
+
 # Source - https://stackoverflow.com/a/60124334
 # Posted by MatanRubin
 # Retrieved 2026-08-19, License - CC BY-SA 4.0
 
-def clean_nones(value):
+def clean_nones(value: Any) -> Any:
     """
     Recursively remove all None values from dictionaries and lists, and returns
     the result as a new dictionary or list.
@@ -487,6 +488,7 @@ def clean_nones(value):
         }
     else:
         return value
+
 
 def main():
     parser = ArgumentParser(
