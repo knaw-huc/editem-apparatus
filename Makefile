@@ -31,6 +31,14 @@ convert-apparatus-israels:
 convert-apparatus-van-gogh:
 	poetry run editem-apparatus-convert --project van-gogh --inputdir ../projects/van-gogh/datasource/tei/apparatus/ --outputdir out/van-gogh --base-url https://example.org
 
+.PHONY: convert-menu-van-gogh
+convert-menu-van-gogh:
+	poetry run editem-menu-convert --inputdir ../projects/van-gogh/datasource/tei/config/ --outputdir out/van-gogh
+
+.PHONY: convert-menu-mondrian
+convert-menu-mondrian:
+	poetry run editem-menu-convert --inputdir ../projects/mondrian/datasource/tei/config/ --outputdir out/mondrian
+
 .PHONY: version-update-patch
 version-update-patch:
 	poetry run version patch
@@ -53,6 +61,9 @@ help:
 	@echo
 	@echo -e "  $(BLUE)convert-apparatus-israels$(RESET)  - convert the israels apparatus files"
 	@echo -e "  $(BLUE)convert-apparatus-van-gogh$(RESET) - convert the van-gogh apparatus files"
+	@echo
+	@echo -e "  $(BLUE)convert-menu-van-gogh$(RESET)      - convert the van-gogh menu file"
+	@echo -e "  $(BLUE)convert-menu-mondrian$(RESET)     - convert the mondrian menu file"
 	@echo
 	@echo -e "  $(BLUE)version-update-patch$(RESET)  - to update the project version to the next patch version"
 	@echo -e "  $(BLUE)version-update-minor$(RESET)  - to update the project version to the next minor version"

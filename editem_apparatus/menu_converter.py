@@ -92,6 +92,13 @@ class MenuConverter:
                     else:
                         value_list = value
                     new_node["items"] = [self._simplify_menu(v) for v in value_list]
+                elif key == "menu":
+                    if isinstance(value, dict):
+                        # value should always be a list
+                        value_list = [value]
+                    else:
+                        value_list = value
+                    new_node[key] = self._simplify_menu(value_list)
                 elif key == "ptr":
                     # Compact ptr.target → target
                     new_node["target"] = value["target"].replace(".xml", "")
