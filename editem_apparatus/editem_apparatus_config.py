@@ -14,3 +14,4 @@ class EditemApparatusConfig:
     graphic_url_mapper: Optional[Callable[[str], str]] = None
     file_url_prefix: str = ""
     illustration_sizes_file: Optional[str] = None
+    keep_name_order_for_sort_label: bool = False

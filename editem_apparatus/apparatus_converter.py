@@ -32,6 +32,7 @@ class NormalizedPersName:
     surname: str
     add_name: str
     gen_name: str
+    role_name: str
 
 
 @dataclass
@@ -42,6 +43,7 @@ class Dimensions:
 
 class ApparatusConverter:
     def __init__(self, config: EditemApparatusConfig):
+        self.keep_name_order_for_sort_label = config.keep_name_order_for_sort_label
         self.apparatus_directory = config.data_path.removesuffix("/")
         self.output_directory = config.export_path.removesuffix("/")
         self.graphic_url_mapper = config.graphic_url_mapper
@@ -356,27 +358,45 @@ class ApparatusConverter:
             non_empty_parts = [pers_name.full_name]
         return " ".join(non_empty_parts)
 
-    @staticmethod
-    def _sort_label(pers_name: NormalizedPersName) -> str:
-        parts = [pers_name.name_link.capitalize(), pers_name.surname, pers_name.add_name, pers_name.gen_name,
-                 pers_name.forename]
-        non_empty_parts = [p for p in parts if p]
-        if len(non_empty_parts) == 1:
-            return non_empty_parts[0]
-        elif len(non_empty_parts) == 0:
-            return pers_name.full_name
+    def _sort_label(self, pers_name: NormalizedPersName) -> str:
+        if self.keep_name_order_for_sort_label:
+            parts = [pers_name.forename, pers_name.gen_name, pers_name.name_link, pers_name.surname, pers_name.add_name]
+            non_empty_parts = [p for p in parts if p]
+            postfix = f", {pers_name.role_name}" if pers_name.role_name is not (None or "") else ""
+            if len(non_empty_parts) == 1:
+                return non_empty_parts[0] + postfix
+            elif len(non_empty_parts) == 0:
+                return pers_name.full_name + postfix
+            else:
+                return " ".join(non_empty_parts) + postfix
         else:
-            return " ".join(non_empty_parts[:-1]) + ", " + non_empty_parts[-1]
+            parts = [pers_name.name_link.capitalize(), pers_name.surname, pers_name.add_name, pers_name.gen_name,
+                     pers_name.forename]
+            non_empty_parts = [p for p in parts if p]
+            if len(non_empty_parts) == 1:
+                return non_empty_parts[0]
+            elif len(non_empty_parts) == 0:
+                return pers_name.full_name
+            else:
+                return " ".join(non_empty_parts[:-1]) + ", " + non_empty_parts[-1]
 
     def _normalized(self, pers_name: dict[str, Any]) -> NormalizedPersName:
-        full_name = self._value(pers_name, "name")
+        # now deprecated? https://editem.pages.huc.knaw.nl/editem-schema/templates/biolist/biolist-encoding.html#name
+        full_name = self._value(pers_name,"name")
         forename = self._value(pers_name, "forename")
         name_link = self._value(pers_name, "nameLink")
         surname = self._normalized_surname(pers_name)
         add_name = self._value(pers_name, "addName")
         gen_name = self._value(pers_name, "genName")
+        role_name = self._value(pers_name, "roleName")
         return NormalizedPersName(
-            full_name, forename, name_link, surname, add_name, gen_name
+            full_name=full_name,
+            forename=forename,
+            name_link=name_link,
+            surname=surname,
+            add_name=add_name,
+            gen_name=gen_name,
+            role_name=role_name
         )
 
     @staticmethod
@@ -508,6 +528,8 @@ def main():
     parser.add_argument('-l', '--logfile', help="Log file (output)", type=str, default=None)
     parser.add_argument('-s', '--sizes', help="Illustration sizes file", type=str)
     parser.add_argument('--ignore-errors', help="Ignore errors", action='store_true')
+    parser.add_argument('--keep-name-order-for-sort-label', help="Don't use lastname, firstname for sortLabel",
+                        action='store_true')
     args = parser.parse_args()
 
     if args.ignore_errors:
@@ -540,6 +562,7 @@ def main():
         graphic_url_mapper=url_mapper,
         log_file_path=args.logfile,
         illustration_sizes_file=args.sizes,
+        keep_name_order_for_sort_label=args.keep_name_order_for_sort_label
     )
 
     errors = ApparatusConverter(config).convert()

@@ -25,11 +25,28 @@ test:
 
 .PHONY: convert-apparatus-israels
 convert-apparatus-israels:
-	poetry run editem-apparatus-convert --project israels --inputdir ../projects/israels/datasource/tei/apparatus/ --outputdir out/israels --base-url https://example.org
+	poetry run editem-apparatus-convert\
+	  --project israels \
+	  --inputdir ../projects/israels/datasource/tei/apparatus/ \
+	  --outputdir out/israels \
+	  --base-url https://example.org
 
 .PHONY: convert-apparatus-van-gogh
 convert-apparatus-van-gogh:
-	poetry run editem-apparatus-convert --project van-gogh --inputdir ../projects/van-gogh/datasource/tei/apparatus/ --outputdir out/van-gogh --base-url https://example.org
+	poetry run editem-apparatus-convert \
+	  --project van-gogh \
+	  --inputdir ../projects/van-gogh/datasource/tei/apparatus/ \
+	  --outputdir out/van-gogh \
+	  --base-url https://example.org
+
+.PHONY: convert-apparatus-mechteld
+convert-apparatus-mechteld:
+	poetry run editem-apparatus-convert \
+	  --project mechteld \
+	  --inputdir ../projects/mechteldvangelre-pipeline/datasource/tei/apparatus/ \
+	  --outputdir out/mechteld \
+	  --base-url https://example.org \
+	  --keep-name-order-for-sort-label
 
 .PHONY: convert-menu-van-gogh
 convert-menu-van-gogh:
@@ -61,6 +78,7 @@ help:
 	@echo
 	@echo -e "  $(BLUE)convert-apparatus-israels$(RESET)  - convert the israels apparatus files"
 	@echo -e "  $(BLUE)convert-apparatus-van-gogh$(RESET) - convert the van-gogh apparatus files"
+	@echo -e "  $(BLUE)convert-apparatus-mechteld$(RESET) - convert the mechteld van gelderen apparatus files, preserving the name order in sortLabel"
 	@echo
 	@echo -e "  $(BLUE)convert-menu-van-gogh$(RESET)      - convert the van-gogh menu file"
 	@echo -e "  $(BLUE)convert-menu-mondrian$(RESET)     - convert the mondrian menu file"
