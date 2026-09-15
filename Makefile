@@ -80,8 +80,8 @@ help:
 	@echo -e "  $(BLUE)convert-apparatus-van-gogh$(RESET) - convert the van-gogh apparatus files"
 	@echo -e "  $(BLUE)convert-apparatus-mechteld$(RESET) - convert the mechteld van gelderen apparatus files, preserving the name order in sortLabel"
 	@echo
-	@echo -e "  $(BLUE)convert-menu-van-gogh$(RESET)      - convert the van-gogh menu file"
-	@echo -e "  $(BLUE)convert-menu-mondrian$(RESET)     - convert the mondrian menu file"
+	@echo -e "  $(BLUE)convert-menu-van-gogh$(RESET) - convert the van-gogh menu file"
+	@echo -e "  $(BLUE)convert-menu-mondrian$(RESET) - convert the mondrian menu file"
 	@echo
 	@echo -e "  $(BLUE)version-update-patch$(RESET)  - to update the project version to the next patch version"
 	@echo -e "  $(BLUE)version-update-minor$(RESET)  - to update the project version to the next minor version"

@@ -19,7 +19,10 @@ from editem_apparatus.apparatus_handler import ApparatusHandler
 from editem_apparatus.editem_apparatus_config import EditemApparatusConfig
 from editem_apparatus.io_tools import IOHandler
 
-ns = {'xml': 'http://www.w3.org/XML/1998/namespace'}
+ns = {
+    'xml': 'http://www.w3.org/XML/1998/namespace',
+    'tei': 'http://www.tei-c.org/ns/1.0'
+}
 
 rw = IOHandler()
 
@@ -104,7 +107,7 @@ class ApparatusConverter:
             list_tags = ["listObject", "listBibl", "listPerson"]
             list_elements = list(
                 itertools.chain.from_iterable(
-                    [text_node.findall(".//{http://www.tei-c.org/ns/1.0}" + lt, namespaces=ns) for lt in list_tags]
+                    [text_node.findall(f".//tei:{lt}", namespaces=ns) for lt in list_tags]
                 )
             )
             if not list_elements:
@@ -132,6 +135,9 @@ class ApparatusConverter:
                     xml_str = ET.tostring(element, encoding='UTF-8')
                     parsed_dict = xmltodict.parse(xml_str)
                     element_dict = self._simplify_keys(list(parsed_dict.values())[0])
+                    pers_names = element.findall('.//tei:persName[@full="yes"]', namespaces=ns)
+                    if len(pers_names) > 0:
+                        element_dict["full_name"] = " ".join(pers_names[0].itertext())
                     # filepath = os.path.join(output_dir, f"{xml_id}.json")
                     # logger.info(f"=> {filepath}")
                     # with open(filepath, 'w') as f:
@@ -286,8 +292,14 @@ class ApparatusConverter:
                          normalized_pers_name.add_name, normalized_pers_name.gen_name])) == 0:
                     logger.warning(
                         f"no nameparts (forename, surname, etc.) found in Person #{entity_id}, using fullname for displayLabel/sortLabel")
-                entity["displayLabel"] = self._display_label(normalized_pers_name)
-                entity["sortLabel"] = self._sort_label(normalized_pers_name)
+                if self.keep_name_order_for_sort_label:
+                    full_name = entity.pop("full_name")
+                    entity["displayLabel"] = full_name
+                    entity["sortLabel"] = full_name
+                else:
+                    entity["displayLabel"] = self._display_label(normalized_pers_name)
+                    entity["sortLabel"] = self._sort_label(normalized_pers_name)
+
             new_dict[entity_id] = entity
         return new_dict
 
@@ -360,6 +372,7 @@ class ApparatusConverter:
 
     def _sort_label(self, pers_name: NormalizedPersName) -> str:
         if self.keep_name_order_for_sort_label:
+            # use the text in the order presented in <persName>
             parts = [pers_name.forename, pers_name.gen_name, pers_name.name_link, pers_name.surname, pers_name.add_name]
             non_empty_parts = [p for p in parts if p]
             postfix = f", {pers_name.role_name}" if pers_name.role_name is not (None or "") else ""
@@ -382,7 +395,7 @@ class ApparatusConverter:
 
     def _normalized(self, pers_name: dict[str, Any]) -> NormalizedPersName:
         # now deprecated? https://editem.pages.huc.knaw.nl/editem-schema/templates/biolist/biolist-encoding.html#name
-        full_name = self._value(pers_name,"name")
+        full_name = self._value(pers_name, "name")
         forename = self._value(pers_name, "forename")
         name_link = self._value(pers_name, "nameLink")
         surname = self._normalized_surname(pers_name)
@@ -545,14 +558,16 @@ def main():
         else:
             base += f"{args.project}|illustrations|{url}"
         if args.no_extension:
-            if url.endswith(('.jpg', '.jpeg', '.tif', '.gif', '.png', '.webp')):
+            if has_image_extension(url):
                 base = ".".join(base.split('.')[:-1])
             return base
         else:
-            if not url.endswith(
-                    ('.jpg', '.jpeg', '.tif', '.gif', '.png', '.webp')):  # some projects don't add the extension
+            if not has_image_extension(url):  # some projects don't add the extension
                 return f"{base}.jpg"  # guess one
             return base
+
+    def has_image_extension(url) -> Any:
+        return url.endswith(('.jpg', '.jpeg', '.tif', '.gif', '.png', '.webp'))
 
     config = EditemApparatusConfig(
         project_name=args.project,
