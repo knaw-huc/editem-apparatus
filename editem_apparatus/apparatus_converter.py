@@ -79,6 +79,7 @@ class ApparatusConverter:
         self.output_directory = config.export_path.removesuffix("/")
         self.graphic_url_mapper = config.graphic_url_mapper
         self.file_url_prefix = config.file_url_prefix
+        self.default_language = config.default_language
         self.errors = []
         self.illustration_sizes_file = config.illustration_sizes_file
         if config.illustration_sizes_file:
@@ -109,7 +110,7 @@ class ApparatusConverter:
             The collected error messages (empty if everything went well).
         """
         base_dir = self.apparatus_directory
-        xml_files = [xml for xml in os.listdir(base_dir) if xml.endswith(".xml")]
+        xml_files = [x for x in os.listdir(base_dir) if x.endswith(".xml")]
         for xml_file in xml_files:
             try:
                 base_name = xml_file.removesuffix(".xml")
@@ -131,7 +132,7 @@ class ApparatusConverter:
         self._convert_to_json(xml_source, output_dir, base_name)
         self._convert_to_html(xml_source, output_dir, base_name)
 
-    def _convert_to_json(self, xml: str, output_dir: str, base_name: str):
+    def _convert_to_json(self, xml_str: str, output_dir: str, base_name: str):
         """Export the XML document and its identified entities as JSON.
 
         Writes the whole document, then, per list element (``listObject``,
@@ -140,18 +141,18 @@ class ApparatusConverter:
         normalization pipeline.
 
         Args:
-            xml: The XML source.
+            xml_str: The XML source.
             output_dir: Directory to write to.
             base_name: File name without extension, used as prefix for outputs.
         """
         # export json conversion of complete xml file
-        xpars = xmltodict.parse(xml)
+        xpars = xmltodict.parse(xml_str)
         element_dict = self._simplify_keys(list(xpars.values())[0])
         path = f"{output_dir}/{base_name}.json"
         rw.write_json(path, element_dict)
 
         list_elements = []
-        root = ET.fromstring(xml)
+        root = ET.fromstring(xml_str)
         text_node = root.find(".//{http://www.tei-c.org/ns/1.0}text")
         if text_node is not None:
             list_tags = ["listObject", "listBibl", "listPerson"]
@@ -187,8 +188,9 @@ class ApparatusConverter:
                     element_dict = self._simplify_keys(list(parsed_dict.values())[0])
                     pers_names = element.findall('.//tei:persName[@full="yes"]', namespaces=ns)
                     if len(pers_names) > 0:
-                        element_dict["full_name"] = " ".join(pers_names[0].itertext())
-                    # filepath = os.path.join(output_dir, f"{xml_id}.json")
+                        raw_full_name = " ".join(pers_names[0].itertext())
+                        element_dict["full_name"] = re.sub(r'\s+', ' ', raw_full_name).strip()
+                        # filepath = os.path.join(output_dir, f"{xml_id}.json")
                     # logger.info(f"=> {filepath}")
                     # with open(filepath, 'w') as f:
                     #     json.dump(element_dict, fp=f, indent=2, ensure_ascii=False)
@@ -197,6 +199,7 @@ class ApparatusConverter:
 
             converted_entity_dict = pipe(
                 entity_dict,
+                self._add_missing_default_xml_lang_to_note_values,
                 self._convert_all_object_lists_with_lang_fields_to_dict,
                 self._normalize_list_values,
                 self._add_labels_for_persons,
@@ -300,10 +303,28 @@ class ApparatusConverter:
 
     @staticmethod
     def _simplify(d: dict[str, Any]) -> Any:
-        """Collapse ``{"text": ...}`` to its whitespace-normalized string; else return ``d``."""
+        """Collapse ``{"text": ...}`` to its whitespace-normalized string; else return the given dict."""
         if len(d) == 1 and "text" in d:
             return re.sub(r'\s+', ' ', d["text"]).strip()
         return d
+
+    def _add_missing_default_xml_lang_to_note_values(
+            self, in_dict: dict[str, dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        """Add lang attribute to note fields that don't already have one"""
+        return {k: self._add_missing_default_xml_lang_to_note_fields(v) for (k, v) in in_dict.items()}
+
+    def _add_missing_default_xml_lang_to_note_fields(self, in_dict: dict[str, Any]) -> dict[str, Any]:
+        def with_lang(d: dict[str, Any]) -> dict[str, Any]:
+            return d if "lang" in d else d | {"lang": self.default_language}
+
+        out_dict = dict(in_dict)
+        note = in_dict.get("note")
+        if isinstance(note, dict):
+            out_dict["note"] = with_lang(note)
+        elif isinstance(note, list):
+            out_dict["note"] = [with_lang(d) for d in note]
+        return out_dict
 
     def _convert_all_object_lists_with_lang_fields_to_dict(
             self, in_dict: dict[str, dict[str, Any]]
@@ -488,7 +509,7 @@ class ApparatusConverter:
             # use the text in the order presented in <persName>
             parts = [pers_name.forename, pers_name.gen_name, pers_name.name_link, pers_name.surname, pers_name.add_name]
             non_empty_parts = [p for p in parts if p]
-            postfix = f", {pers_name.role_name}" if pers_name.role_name is not (None or "") else ""
+            postfix = f", {pers_name.role_name}" if pers_name.role_name else ""
             if len(non_empty_parts) == 1:
                 return non_empty_parts[0] + postfix
             elif len(non_empty_parts) == 0:
@@ -696,6 +717,9 @@ def main():
     parser.add_argument('--ignore-errors', help="Ignore errors", action='store_true')
     parser.add_argument('--keep-name-order-for-sort-label', help="Don't use lastname, firstname for sortLabel",
                         action='store_true')
+    parser.add_argument('--default-language',
+                        help="Assume `xml:lang` value for fields that should have this attribute, but don't (default: en",
+                        type=str, default='en')
     args = parser.parse_args()
 
     if args.ignore_errors:
@@ -737,7 +761,8 @@ def main():
         graphic_url_mapper=url_mapper,
         log_file_path=args.logfile,
         illustration_sizes_file=args.sizes,
-        keep_name_order_for_sort_label=args.keep_name_order_for_sort_label
+        keep_name_order_for_sort_label=args.keep_name_order_for_sort_label,
+        default_language=args.default_language,
     )
 
     errors = ApparatusConverter(config).convert()
