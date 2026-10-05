@@ -1,3 +1,17 @@
+"""Convert editem apparatus TEI XML files into JSON and HTML exports.
+
+For every ``*.xml`` file in the input directory this module writes:
+
+* ``<base>.json``: the complete XML document as JSON,
+* ``<base>.html``: an HTML rendering of the document,
+* ``<base>-entity-dict.json``: all ``xml:id`` elements keyed by ``<base>/<xml:id>``,
+* ``<base>[.<list-id>]-entities.json``: entities as lists, split per
+  ``listObject``/``listBibl``/``listPerson`` when those carry an ``xml:id``.
+
+Entities are normalized along the way (language-keyed fields, list values,
+person labels, IIIF graphic URLs and dimensions), and artwork relations are
+afterwards annotated with labels of the referenced bio entities.
+"""
 import csv
 import glob
 import itertools
@@ -29,6 +43,7 @@ rw = IOHandler()
 
 @dataclass
 class NormalizedPersName:
+    """The parts of a ``<persName>`` as plain strings (empty string when absent)."""
     full_name: str
     forename: str
     name_link: str
@@ -40,12 +55,25 @@ class NormalizedPersName:
 
 @dataclass
 class Dimensions:
+    """Pixel dimensions of an illustration."""
     width: int
     height: int
 
 
 class ApparatusConverter:
+    """Converts a directory of editem apparatus TEI files to JSON and HTML.
+
+    Problems that do not abort the conversion are collected in ``self.errors``
+    and returned by :meth:`convert`.
+    """
+
     def __init__(self, config: EditemApparatusConfig):
+        """Set up paths, illustration dimensions and logging from ``config``.
+
+        Args:
+            config: Conversion settings (input/output paths, URL mapper,
+                illustration sizes file, logging options, label ordering).
+        """
         self.keep_name_order_for_sort_label = config.keep_name_order_for_sort_label
         self.apparatus_directory = config.data_path.removesuffix("/")
         self.output_directory = config.export_path.removesuffix("/")
@@ -71,6 +99,15 @@ class ApparatusConverter:
             logger.add(config.log_file_path)
 
     def convert(self) -> list[str]:
+        """Convert every ``.xml`` file in the input directory.
+
+        A failure in one file is recorded and does not stop the others. After
+        all files are processed, artwork relations are labelled with bio entity
+        labels and the generated files are reported.
+
+        Returns:
+            The collected error messages (empty if everything went well).
+        """
         base_dir = self.apparatus_directory
         xml_files = [xml for xml in os.listdir(base_dir) if xml.endswith(".xml")]
         for xml_file in xml_files:
@@ -88,12 +125,25 @@ class ApparatusConverter:
         return self.errors
 
     def _process_xml(self, xml_path: str, output_dir: str, base_name: str):
+        """Read one XML file and write its JSON and HTML exports."""
         xml_source = rw.read_text(xml_path)
 
         self._convert_to_json(xml_source, output_dir, base_name)
         self._convert_to_html(xml_source, output_dir, base_name)
 
     def _convert_to_json(self, xml: str, output_dir: str, base_name: str):
+        """Export the XML document and its identified entities as JSON.
+
+        Writes the whole document, then, per list element (``listObject``,
+        ``listBibl``, ``listPerson``, or the whole ``<text>`` if none exist),
+        every element with an ``xml:id`` after running it through the
+        normalization pipeline.
+
+        Args:
+            xml: The XML source.
+            output_dir: Directory to write to.
+            base_name: File name without extension, used as prefix for outputs.
+        """
         # export json conversion of complete xml file
         xpars = xmltodict.parse(xml)
         element_dict = self._simplify_keys(list(xpars.values())[0])
@@ -165,9 +215,15 @@ class ApparatusConverter:
 
     @staticmethod
     def _export_as_json(data: Any, path: str):
+        """Write ``data`` as JSON to ``path``, with ``None`` values removed."""
         rw.write_json(path, clean_nones(data))
 
     def _simplify_keys(self, kv_dict: dict[str, Any]) -> dict[str, Any]:
+        """Recursively turn xmltodict keys into plain names.
+
+        Drops ``@xmlns*`` keys, strips the ``@``/``#`` prefixes and any
+        namespace prefix (``xml:id`` becomes ``id``), and removes ``None`` values.
+        """
         new_dict = {}
         for key, value in kv_dict.items():
             if not key.startswith("@xmlns"):
@@ -187,19 +243,36 @@ class ApparatusConverter:
         return clean_nones(new_dict)
 
     def _is_lang_type_object_list(self, value: Any) -> bool:
+        """True if ``value`` is a list of dicts having ``lang`` and ``type`` keys."""
         return self._is_lang_object_list(value) and "type" in value[0]
 
     def _is_lang_type_object(self, value: Any) -> bool:
+        """True if ``value`` is a dict having ``lang`` and ``type`` keys."""
         return self._is_lang_object(value) and "type" in value
 
     def _is_lang_object_list(self, value: Any) -> bool:
+        """True if ``value`` is a list whose first item is a dict with a ``lang`` key."""
         return isinstance(value, list) and self._is_lang_object(value[0])
 
     @staticmethod
     def _is_lang_object(value: Any) -> bool:
+        """True if ``value`` is a dict with a ``lang`` key."""
         return isinstance(value, dict) and "lang" in value
 
     def _convert_object_list_value(self, in_value: Any) -> Any:
+        """Re-key language-tagged values by language (and by type, if present).
+
+        Examples of the resulting shapes::
+
+            [{lang, type, ...}, ...] -> {lang: {type: value}}
+            [{lang, ...}, ...]       -> {lang: value}
+            {lang, type, ...}        -> {lang: {type: value}}
+            {lang, ...}              -> {lang: value}
+
+        Items with a type but without a language are assigned to both ``nl``
+        and ``en``. Any other value is returned unchanged. Note that this
+        mutates the input dicts (``lang``/``type`` are popped).
+        """
         if self._is_lang_type_object_list(in_value):
             out_dict = {}
             for i in in_value:
@@ -227,6 +300,7 @@ class ApparatusConverter:
 
     @staticmethod
     def _simplify(d: dict[str, Any]) -> Any:
+        """Collapse ``{"text": ...}`` to its whitespace-normalized string; else return ``d``."""
         if len(d) == 1 and "text" in d:
             return re.sub(r'\s+', ' ', d["text"]).strip()
         return d
@@ -234,14 +308,23 @@ class ApparatusConverter:
     def _convert_all_object_lists_with_lang_fields_to_dict(
             self, in_dict: dict[str, dict[str, Any]]
     ) -> dict[str, dict[str, Any]]:
+        """Apply the language re-keying to the fields of every entity."""
         return {k: self._convert_lang_object_list_fields(v) for (k, v) in in_dict.items()}
 
     def _convert_lang_object_list_fields(
             self, in_dict: dict[str, Any]
     ) -> dict[str, Any]:
+        """Apply :meth:`_convert_object_list_value` to each field of one entity."""
         return {k: self._convert_object_list_value(v) for (k, v) in in_dict.items()}
 
     def _normalize_list_values(self, in_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Make fields that are a list in any entity a list in all entities.
+
+        XML-to-dict conversion yields a scalar for a single occurrence and a
+        list for repeated ones; this wraps the scalars so consumers see a
+        consistent type per (dotted) field path.
+        """
+
         def _set_value_as_list(d, path):
             keys = path.split('.')
             current = d
@@ -265,6 +348,8 @@ class ApparatusConverter:
 
     @staticmethod
     def _find_keys_with_list_values(in_dict: dict[str, Any]) -> set[str]:
+        """Collect the dotted paths of all fields that hold a list in any entity."""
+
         def _recurse(d, path=''):
             keys_with_lists = set()
             if isinstance(d, dict):
@@ -282,6 +367,12 @@ class ApparatusConverter:
         return result
 
     def _add_labels_for_persons(self, entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Add ``displayLabel`` and ``sortLabel`` to entities that have a ``persName``.
+
+        With ``keep_name_order_for_sort_label`` both labels are the full name
+        as written; otherwise they are built from the preferred name's parts.
+        A warning is logged when a person has no usable name parts.
+        """
         new_dict = {}
         for entity_id, entity in entity_dict.items():
             if "persName" in entity:
@@ -304,6 +395,12 @@ class ApparatusConverter:
         return new_dict
 
     def _extend_graphic_annotation(self, entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Rewrite graphic URLs and add image width/height.
+
+        Only active when both a URL mapper and illustration dimensions are
+        configured. Graphics missing from the sizes file get a warning and an
+        entry in ``self.errors``.
+        """
         if self.graphic_url_mapper and self.illustration_dimensions:
             new_dict = {}
             for entity_id, entity in entity_dict.items():
@@ -325,6 +422,7 @@ class ApparatusConverter:
 
     @staticmethod
     def _convert_source_to_list(entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Split each entity's space-separated ``source`` string into a list."""
         new_dict = {}
         for entity_id, entity in entity_dict.items():
             if "source" in entity:
@@ -334,6 +432,7 @@ class ApparatusConverter:
 
     @staticmethod
     def _convert_relation_to_list(entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Wrap a single ``relation`` dict in a list so it is always a list."""
         new_dict = {}
         for entity_id, entity in entity_dict.items():
             if "relation" in entity and isinstance(entity["relation"], dict):
@@ -343,6 +442,12 @@ class ApparatusConverter:
 
     @staticmethod
     def _preferred_pers_name(pers_names: Union[dict[str, Any], list[dict[str, Any]]]) -> dict[str, Any]:
+        """Pick the ``persName`` to build labels from.
+
+        A single name is used as is. Among several, the abbreviated one
+        (``full="abb"``) is preferred, unless it lacks a ``forename`` and
+        another name has one; with no abbreviated name the first is used.
+        """
         if isinstance(pers_names, dict):
             return pers_names
         elif len(pers_names) == 1:
@@ -364,6 +469,7 @@ class ApparatusConverter:
 
     @staticmethod
     def _display_label(pers_name: NormalizedPersName) -> str:
+        """Build the display label: name parts in natural order, or the full name if none."""
         parts = [pers_name.forename, pers_name.name_link, pers_name.surname, pers_name.add_name, pers_name.gen_name]
         non_empty_parts = [p for p in parts if p]
         if len(non_empty_parts) == 0:
@@ -371,6 +477,13 @@ class ApparatusConverter:
         return " ".join(non_empty_parts)
 
     def _sort_label(self, pers_name: NormalizedPersName) -> str:
+        """Build the sort label for a person.
+
+        By default: ``"<nameLink> <surname> <addName> <genName>, <forename>"``
+        (surname-first). With ``keep_name_order_for_sort_label``: the parts in
+        written order, followed by ``", <roleName>"`` when a role is present.
+        Falls back to the full name when there are no name parts.
+        """
         if self.keep_name_order_for_sort_label:
             # use the text in the order presented in <persName>
             parts = [pers_name.forename, pers_name.gen_name, pers_name.name_link, pers_name.surname, pers_name.add_name]
@@ -394,6 +507,7 @@ class ApparatusConverter:
                 return " ".join(non_empty_parts[:-1]) + ", " + non_empty_parts[-1]
 
     def _normalized(self, pers_name: dict[str, Any]) -> NormalizedPersName:
+        """Extract the name parts of a ``persName`` dict into a :class:`NormalizedPersName`."""
         # now deprecated? https://editem.pages.huc.knaw.nl/editem-schema/templates/biolist/biolist-encoding.html#name
         full_name = self._value(pers_name, "name")
         forename = self._value(pers_name, "forename")
@@ -414,6 +528,11 @@ class ApparatusConverter:
 
     @staticmethod
     def _value(pers_name: dict[str, Any], field: str) -> str:
+        """Get ``field`` from ``pers_name`` as a string.
+
+        Missing or ``None`` gives ``""``; a list is joined with ``", "`` (and a
+        warning is logged).
+        """
         value = pers_name.get(field, "")
         if value is None:
             return ""
@@ -424,6 +543,11 @@ class ApparatusConverter:
 
     @staticmethod
     def _normalized_surname(pers_name: dict[str, Any]) -> str:
+        """Get the surname as a string.
+
+        A list of two surnames becomes ``"first (second)"``; a single-item list
+        yields that item; any other list length yields ``""``.
+        """
         surname_value: Union[list[str], str] = pers_name.get("surname", [])
         if isinstance(surname_value, str):
             return surname_value
@@ -443,6 +567,16 @@ class ApparatusConverter:
 
     def _add_label_to_ref(self, entity: dict[str, Any], label4ref: dict[str, str], sort_label4ref: dict[str, str]) -> \
             dict[str, Any]:
+        """Add ``displayLabel``/``sortLabel`` to each ``relation`` of an entity, based on its ``ref``.
+
+        Args:
+            entity: The entity whose relations are annotated (modified in place).
+            label4ref: Display labels keyed by ref (e.g. ``bio.xml#id``).
+            sort_label4ref: Sort labels keyed by ref.
+
+        Unknown refs are logged and recorded in ``self.errors``, and get a
+        placeholder display label.
+        """
         if "relation" in entity:
             relation = entity["relation"]
             if isinstance(relation, dict):
@@ -461,6 +595,11 @@ class ApparatusConverter:
         return entity
 
     def _add_labels_to_refs(self):
+        """Label the relations in the artwork exports with labels from ``bio-entities.json``.
+
+        Rewrites ``artwork*-entities.json`` and ``artwork-entity-dict.json`` in
+        the output directory. Does nothing for files that do not exist.
+        """
         # load bio-entities
         label_for_ref = {}
         sort_label_for_ref = {}
@@ -486,6 +625,7 @@ class ApparatusConverter:
 
     @staticmethod
     def _convert_to_html(xml_string: str, output_dir: str, base_name: str) -> None:
+        """Render the XML as HTML with :class:`ApparatusHandler` and write ``<base_name>.html``."""
         # toc = _head
         handler = ApparatusHandler()
         xml.sax.parseString(xml_string, handler)
@@ -494,6 +634,13 @@ class ApparatusConverter:
 
     @staticmethod
     def _load_illustration_dimensions(illustration_sizes_file: str) -> dict[str, Dimensions]:
+        """Load illustration sizes from a tab-separated file.
+
+        The file needs a header with ``file``, ``width`` and ``height`` columns.
+
+        Returns:
+            A mapping from file name to its :class:`Dimensions`.
+        """
         illustration_dimensions: dict[str, Dimensions] = {}
         if illustration_sizes_file is not None:
             with open(illustration_sizes_file, encoding='utf8') as f:
@@ -524,6 +671,12 @@ def clean_nones(value: Any) -> Any:
 
 
 def main():
+    """Command-line entry point.
+
+    Parses arguments, builds the IIIF graphic URL mapper and the converter
+    config, runs the conversion, and exits with status 1 if errors occurred
+    (unless ``--ignore-errors`` is given).
+    """
     parser = ArgumentParser(
         description="Extract structured data from editem apparatus tei xml",
         formatter_class=ArgumentDefaultsHelpFormatter)
@@ -550,6 +703,12 @@ def main():
         logger.add(sink=sys.stderr, level="WARNING")
 
     def url_mapper(url):
+        """Map an illustration file name to its IIIF image URL.
+
+        Prepends the base URL (plus ``<project>|illustrations|`` unless
+        ``--no-prefix``) and then either strips the extension (``--no-extension``)
+        or appends ``.jpg`` when the file name has no image extension.
+        """
         base = args.base_url
         if base[-1] != '/':
             base += '/'
@@ -567,6 +726,7 @@ def main():
             return base
 
     def has_image_extension(url) -> Any:
+        """True if ``url`` ends with a known image extension."""
         return url.endswith(('.jpg', '.jpeg', '.tif', '.gif', '.png', '.webp'))
 
     config = EditemApparatusConfig(
