@@ -191,6 +191,14 @@ class ApparatusConverter:
                         raw_full_name = " ".join(pers_names[0].itertext())
                         element_dict["full_name"] = re.sub(r'\s+', ' ', raw_full_name).strip()
                         # filepath = os.path.join(output_dir, f"{xml_id}.json")
+                    notes = element.findall('.//tei:note', namespaces=ns)
+                    if len(notes) > 0:
+                        note_texts = []
+                        for note in notes:
+                            raw_note_text = " ".join(note.itertext())
+                            note_texts.append(re.sub(r'\s+', ' ', raw_note_text).strip())
+                        element_dict["note_texts"] = note_texts
+
                     # logger.info(f"=> {filepath}")
                     # with open(filepath, 'w') as f:
                     #     json.dump(element_dict, fp=f, indent=2, ensure_ascii=False)
@@ -203,6 +211,7 @@ class ApparatusConverter:
                 self._convert_all_object_lists_with_lang_fields_to_dict,
                 self._normalize_list_values,
                 self._add_labels_for_persons,
+                self._set_note_text,
                 self._extend_graphic_annotation,
                 self._convert_source_to_list,
                 self._convert_relation_to_list,
@@ -386,6 +395,25 @@ class ApparatusConverter:
         for d in in_dict.values():
             result.update(_recurse(d))
         return result
+
+    @staticmethod
+    def _set_note_text(entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        new_dict = {}
+        for entity_id, entity in entity_dict.items():
+            note_idx = 0
+            if "note" in entity:
+                note_texts = entity.pop("note_texts")
+                new_entity = dict(entity)
+                new_notes = new_entity.pop("note")
+                for lang in new_notes.keys():
+                    for note_type in new_notes[lang].keys():
+                        new_notes[lang][note_type] = note_texts[note_idx]
+                        note_idx += 1
+                new_entity["note"] = new_notes
+                new_dict[entity_id] = new_entity
+            else:
+                new_dict[entity_id] = entity
+        return new_dict
 
     def _add_labels_for_persons(self, entity_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
         """Add ``displayLabel`` and ``sortLabel`` to entities that have a ``persName``.
