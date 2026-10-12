@@ -436,9 +436,13 @@ class ApparatusConverter:
                     full_name = entity.pop("full_name")
                     entity["displayLabel"] = full_name
                     entity["sortLabel"] = full_name
+                    entity["fullName"] = full_name
                 else:
                     entity["displayLabel"] = self._display_label(normalized_pers_name)
                     entity["sortLabel"] = self._sort_label(normalized_pers_name)
+                    full_name = self._full_name(entity["persName"])
+                    normalized_full_name = self._normalized(full_name)
+                    entity["fullName"] = self._sort_label(normalized_full_name)
 
             new_dict[entity_id] = entity
         return new_dict
@@ -513,6 +517,27 @@ class ApparatusConverter:
                     except IndexError:
                         # fallback
                         return abb
+            else:
+                return pers_names[0]
+
+    @staticmethod
+    def _full_name(pers_names: Union[dict[str, Any], list[dict[str, Any]]]) -> dict[str, Any]:
+        if isinstance(pers_names, dict):
+            return pers_names
+        elif len(pers_names) == 1:
+            return pers_names[0]
+        else:
+            fulls = [pn for pn in pers_names if pn["full"] == "yes"]
+            if fulls:
+                full = fulls[0]
+                if "forename" in full:
+                    return full
+                else:
+                    try:
+                        return [pn for pn in pers_names if "forename" in pn][0]
+                    except IndexError:
+                        # fallback
+                        return full
             else:
                 return pers_names[0]
 
@@ -614,7 +639,8 @@ class ApparatusConverter:
         else:
             return ""
 
-    def _add_label_to_ref(self, entity: dict[str, Any], label4ref: dict[str, str], sort_label4ref: dict[str, str]) -> \
+    def _add_label_to_ref(self, entity: dict[str, Any], label4ref: dict[str, str], sort_label4ref: dict[str, str],
+                          full_name4ref: dict[str, str]) -> \
             dict[str, Any]:
         """Add ``displayLabel``/``sortLabel`` to each ``relation`` of an entity, based on its ``ref``.
 
@@ -636,6 +662,7 @@ class ApparatusConverter:
                     if ref in label4ref:
                         relation[i]["displayLabel"] = label4ref[ref]
                         relation[i]["sortLabel"] = sort_label4ref[ref]
+                        relation[i]["fullName"] = full_name4ref[ref]
                     else:
                         error = f"invalid ref: {ref} for artwork.xml#{entity['id']}"
                         logger.error(error)
@@ -652,23 +679,25 @@ class ApparatusConverter:
         # load bio-entities
         label_for_ref = {}
         sort_label_for_ref = {}
+        full_name_for_ref = {}
         bio_path = f"{self.output_directory}/bio-entities.json"
         if os.path.exists(bio_path):
             bio_entities = rw.read_json(bio_path)
             label_for_ref = {f"bio.xml#{b['id']}": b["displayLabel"] for b in bio_entities}
             sort_label_for_ref = {f"bio.xml#{b['id']}": b["sortLabel"] for b in bio_entities}
+            full_name_for_ref = {f"bio.xml#{b['id']}": b["fullName"] for b in bio_entities}
 
         # rewrite artwork.*-entities.json, add label to relation.ref elements
         artwork_paths = glob.glob(f"{self.output_directory}/artwork*-entities.json")
         for artwork_path in artwork_paths:
             artwork_entities = rw.read_json(artwork_path)
-            new_artwork_entities = [self._add_label_to_ref(a, label_for_ref, sort_label_for_ref) for a in
+            new_artwork_entities = [self._add_label_to_ref(a, label_for_ref, sort_label_for_ref, full_name_for_ref) for a in
                                     artwork_entities]
             rw.write_json(artwork_path, new_artwork_entities)
         entity_dict_path = f"{self.output_directory}/artwork-entity-dict.json"
         if os.path.exists(entity_dict_path):
             entity_dict = rw.read_json(entity_dict_path)
-            new_entity_dict = {k: self._add_label_to_ref(v, label_for_ref, sort_label_for_ref)
+            new_entity_dict = {k: self._add_label_to_ref(v, label_for_ref, sort_label_for_ref, full_name_for_ref)
                                for k, v in entity_dict.items()}
             rw.write_json(entity_dict_path, new_entity_dict)
 
