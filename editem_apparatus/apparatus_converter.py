@@ -442,7 +442,7 @@ class ApparatusConverter:
                     entity["sortLabel"] = self._sort_label(normalized_pers_name)
                     full_name = self._full_name(entity["persName"])
                     normalized_full_name = self._normalized(full_name)
-                    entity["fullName"] = self._sort_label(normalized_full_name)
+                    entity["fullName"] = self._display_label(normalized_full_name)
 
             new_dict[entity_id] = entity
         return new_dict
